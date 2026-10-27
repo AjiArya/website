@@ -30,16 +30,28 @@
     </header>
     <div class="terminal__body">
       <form class="terminal__form" data-terminal-form role="search">
-        <label class="visually-hidden" for="terminal-input">Navigate the site</label>
+        <label class="visually-hidden" for="terminal-input">Search the site or run a command</label>
         <span class="terminal__prompt" aria-hidden="true">$</span>
-        <input class="terminal__input" id="terminal-input" data-terminal-input type="text" autocomplete="off" spellcheck="false" placeholder="type a page, post, or topic…" aria-controls="terminal-results" aria-autocomplete="list" aria-expanded="true">
+        <input class="terminal__input" id="terminal-input" data-terminal-input type="text" autocomplete="off" spellcheck="false" placeholder="search, or type / for commands…" role="combobox" aria-haspopup="listbox" aria-controls="terminal-results" aria-autocomplete="list" aria-expanded="true">
+        <span class="terminal__completion" data-terminal-completion aria-hidden="true" hidden></span>
       </form>
-      <p class="terminal__hint" id="terminal-help">↑↓ navigate · Enter open · Esc close · type / anywhere</p>
-      <div class="terminal__results" id="terminal-results" data-terminal-results role="listbox" aria-label="Site destinations"></div>
+      <p class="terminal__hint" id="terminal-help">↑↓ select · Tab autocomplete · Enter run · Esc close · type / anywhere</p>
+      <div class="terminal__results" id="terminal-results" data-terminal-results role="listbox" aria-label="Site destinations and commands"></div>
       <p class="terminal__empty" data-terminal-empty hidden>No matching route.</p>
+      <div class="terminal__help" data-terminal-help hidden>
+        <p class="terminal__help-title">Commands</p>
+        <div class="terminal__help-grid">
+          <code>/search &lt;query&gt;</code><span>Search pages, posts, tags, and topics.</span>
+          <code>/find &lt;query&gt;</code><span>Alias for <code>/search</code>.</span>
+          <code>/home</code><span>Jump to the home page.</span>
+          <code>/share [social]</code><span>Share this page, or pick a platform when empty.</span>
+          <code>/help</code><span>Show this command reference.</span>
+        </div>
+        <p class="terminal__help-keys">Share platforms: x · linkedin · facebook · reddit · email · copy</p>
+      </div>
     </div>
     <footer class="terminal__footer">
-      <span>home · writing · about · tags · rss · github</span>
+      <span data-terminal-status aria-live="polite">/search · /home · /share · /help</span>
       <span data-terminal-count aria-live="polite"></span>
     </footer>
   </section>
