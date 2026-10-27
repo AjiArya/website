@@ -382,3 +382,18 @@
     font-size: 9pt;
   }
 }
+
+.diagram__button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+@media (max-width: 360px) {
+  .diagram__controls {
+    gap: 0;
+  }
+
+  .diagram__zoom-label {
+    min-width: 40px;
+  }
+}

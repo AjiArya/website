@@ -61,6 +61,7 @@
     const zoomOutButton = figure.querySelector("[data-dg-zoom-out]");
     const fitButton = figure.querySelector("[data-dg-fit]");
     const resetButton = figure.querySelector("[data-dg-reset]");
+    const pngButton = figure.querySelector("[data-dg-png]");
     const zoomLabel = figure.querySelector("[data-dg-zoom-label]");
     const hint = figure.querySelector("[data-dg-hint]");
 
@@ -132,6 +133,26 @@
         edge.classList.contains("dg-edge--flow") ||
         edge.classList.contains("dg-edge--pulse"),
     );
+
+    const originalNodes = nodes.map((node) =>
+      node.element.getAttribute("transform"),
+    );
+    const originalEdges = edges.map((edge) => ({
+      d: edge.path.getAttribute("d"),
+      labelX: edge.label ? edge.label.getAttribute("x") : null,
+      labelY: edge.label ? edge.label.getAttribute("y") : null,
+    }));
+    const originalGroups = groups.map((group) => ({
+      box: {
+        x: group.box.getAttribute("x"),
+        y: group.box.getAttribute("y"),
+        width: group.box.getAttribute("width"),
+        height: group.box.getAttribute("height"),
+      },
+      labelX: group.label.getAttribute("x"),
+      labelY: group.label.getAttribute("y"),
+    }));
+    const originalPacketPhases = packets.map((packet) => packet.phase);
 
     const pointers = new Map();
     let drag = null;
@@ -556,17 +577,267 @@
     }
 
     function resetLayout() {
-      for (const node of nodes) {
-        node.tx = 0;
-        node.ty = 0;
-        node.element.removeAttribute("transform");
-        node.element.classList.remove("is-moving");
-      }
       nodeDrag = null;
       drag = null;
-      updateEdges();
-      updateGroups();
-      fit();
+      pinch = null;
+      pointers.clear();
+      canvas.classList.remove("is-dragging");
+
+      nodes.forEach((node, index) => {
+        node.tx = 0;
+        node.ty = 0;
+        node.element.classList.remove("is-moving");
+        const transform = originalNodes[index];
+        if (transform) {
+          node.element.setAttribute("transform", transform);
+        } else {
+          node.element.removeAttribute("transform");
+        }
+      });
+
+      edges.forEach((edge, index) => {
+        const original = originalEdges[index];
+        edge.path.setAttribute("d", original.d);
+        if (edge.label) {
+          if (original.labelX !== null) {
+            edge.label.setAttribute("x", original.labelX);
+          }
+          if (original.labelY !== null) {
+            edge.label.setAttribute("y", original.labelY);
+          }
+        }
+      });
+
+      groups.forEach((group, index) => {
+        const original = originalGroups[index];
+        group.box.setAttribute("x", original.box.x);
+        group.box.setAttribute("y", original.box.y);
+        group.box.setAttribute("width", original.box.width);
+        group.box.setAttribute("height", original.box.height);
+        group.label.setAttribute("x", original.labelX);
+        group.label.setAttribute("y", original.labelY);
+      });
+
+      packets.forEach((packet, index) => {
+        packet.phase = originalPacketPhases[index];
+      });
+
+      state.speedIndex = SPEEDS.indexOf(1);
+      state.speed = 1;
+      state.direction = initialDirection;
+      state.userPaused = REDUCED_MOTION.matches || !autoplay;
+      state.autoPaused = !onScreen || tabHidden;
+
+      updateSpeedLabel();
+      updateDirectionLabel();
+      initialView();
+      positionPackets();
+      updateAnimations();
+
+      if (hint) {
+        hintHidden = false;
+        hint.hidden = false;
+        hint.classList.remove("is-hidden");
+      }
+
+      // Restart draw-in animations from the beginning, matching a fresh load.
+      animatedEdges.forEach((edge) => {
+        if (!edge.classList.contains("dg-edge--draw")) return;
+        edge.style.animation = "none";
+        void edge.getBoundingClientRect();
+        edge.style.animation = "";
+      });
+      updateAnimations();
+    }
+
+    function buildDiagramExport() {
+      const clone = svg.cloneNode(true);
+      const originals = [svg, ...svg.querySelectorAll("*")];
+      const clones = [clone, ...clone.querySelectorAll("*")];
+      const props = [
+        "fill",
+        "fill-opacity",
+        "stroke",
+        "stroke-width",
+        "stroke-opacity",
+        "stroke-dasharray",
+        "stroke-dashoffset",
+        "stroke-linecap",
+        "stroke-linejoin",
+        "opacity",
+        "filter",
+        "font-family",
+        "font-size",
+        "font-weight",
+        "font-style",
+        "letter-spacing",
+        "text-anchor",
+        "text-transform",
+        "dominant-baseline",
+        "paint-order",
+        "visibility",
+        "display",
+      ];
+
+      for (let index = 0; index < originals.length; index += 1) {
+        const computed = window.getComputedStyle(originals[index]);
+        const declarations = props
+          .map((prop) => `${prop}:${computed.getPropertyValue(prop)}`)
+          .join(";");
+        clones[index].setAttribute("style", declarations);
+      }
+
+      clone.querySelectorAll(".dg-edge--draw").forEach((edge) => {
+        edge.style.animation = "none";
+        edge.style.strokeDashoffset = "0";
+        edge.style.strokeDasharray = "1";
+      });
+      clone.querySelectorAll(".dg-edge--pulse").forEach((edge) => {
+        edge.style.animation = "none";
+        edge.style.strokeOpacity = "1";
+      });
+      clone.querySelectorAll(".dg-packet").forEach((packet) => {
+        packet.style.opacity = "1";
+      });
+
+      const background =
+        window
+          .getComputedStyle(document.documentElement)
+          .getPropertyValue("--bg")
+          .trim() || "#0b0d0c";
+      const backgroundRect = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "rect",
+      );
+      backgroundRect.setAttribute("x", String(base.x));
+      backgroundRect.setAttribute("y", String(base.y));
+      backgroundRect.setAttribute("width", String(base.w));
+      backgroundRect.setAttribute("height", String(base.h));
+      backgroundRect.setAttribute("fill", background);
+
+      const firstGraphic =
+        clone.querySelector(".dg-groups") || clone.querySelector("g");
+      if (firstGraphic) {
+        clone.insertBefore(backgroundRect, firstGraphic);
+      } else {
+        clone.appendChild(backgroundRect);
+      }
+
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      clone.setAttribute("viewBox", `${base.x} ${base.y} ${base.w} ${base.h}`);
+      clone.setAttribute("width", String(base.w));
+      clone.setAttribute("height", String(base.h));
+
+      return {
+        markup: new XMLSerializer().serializeToString(clone),
+        background,
+        caption:
+          figure.querySelector("figcaption")?.textContent?.trim() || "",
+      };
+    }
+
+    function renderDiagramPng() {
+      return new Promise((resolve, reject) => {
+        const exported = buildDiagramExport();
+        const svgBlob = new Blob([exported.markup], {
+          type: "image/svg+xml;charset=utf-8",
+        });
+        const url = URL.createObjectURL(svgBlob);
+        const image = new Image();
+        image.onload = () => {
+          const scale = Math.max(
+            1,
+            Math.min(2.5, 4096 / Math.max(base.w, base.h)),
+          );
+          const footer = exported.caption ? 58 : 0;
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(base.w * scale);
+          canvas.height = Math.round((base.h + footer) * scale);
+          const context = canvas.getContext("2d");
+          context.fillStyle = exported.background;
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          context.drawImage(image, 0, 0, canvas.width, Math.round(base.h * scale));
+          URL.revokeObjectURL(url);
+
+          if (exported.caption) {
+            const muted = window
+              .getComputedStyle(document.documentElement)
+              .getPropertyValue("--ink-muted")
+              .trim() || "#7f9182";
+            context.fillStyle = muted;
+            context.font = `${Math.round(10 * scale)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+            context.fillText(
+              exported.caption,
+              Math.round(20 * scale),
+              Math.round((base.h + 28) * scale),
+              Math.round((base.w - 40) * scale),
+            );
+          }
+
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("Could not encode PNG"));
+            }
+          }, "image/png");
+        };
+        image.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("Could not rasterize diagram"));
+        };
+        image.src = url;
+      });
+    }
+
+    function downloadPng(blob) {
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${figure.dataset.diagramName || "diagram"}.png`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function copyDiagramPng() {
+      if (!pngButton) return;
+      const originalLabel = pngButton.textContent;
+      pngButton.disabled = true;
+      pngButton.textContent = "…";
+      pngButton.setAttribute("aria-label", "Preparing PNG");
+
+      try {
+        const blob = await renderDiagramPng();
+        let copied = false;
+        if (navigator.clipboard && window.ClipboardItem) {
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({ "image/png": blob }),
+            ]);
+            copied = true;
+          } catch (_) {
+            copied = false;
+          }
+        }
+        if (!copied) downloadPng(blob);
+        pngButton.textContent = copied ? "Copied" : "Saved";
+        pngButton.setAttribute(
+          "aria-label",
+          copied ? "PNG copied to clipboard" : "PNG downloaded",
+        );
+      } catch (error) {
+        console.error("Diagram PNG export failed", error);
+        pngButton.textContent = "Retry";
+        pngButton.setAttribute("aria-label", "PNG export failed; try again");
+      } finally {
+        pngButton.disabled = false;
+        window.setTimeout(() => {
+          pngButton.textContent = originalLabel;
+          pngButton.setAttribute("aria-label", "Copy diagram as PNG");
+        }, 1800);
+      }
     }
 
     function startPinch() {
@@ -666,6 +937,7 @@
     zoomOutButton?.addEventListener("click", () => zoomAtCenter(1 / 1.25));
     fitButton?.addEventListener("click", fit);
     resetButton?.addEventListener("click", resetLayout);
+    pngButton?.addEventListener("click", copyDiagramPng);
 
     // Pointer pan, node move, and pinch
     canvas.addEventListener("pointerdown", (event) => {

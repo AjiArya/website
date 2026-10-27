@@ -155,7 +155,10 @@ Diagrams are rendered inside a fixed-height SVG canvas with a toolbar:
 - **Move nodes**: hold and drag any node; connected edges and group boxes
   follow the node.
 - **Fit**: show the whole diagram.
-- **Reset**: restore node positions and the fitted view.
+- **Reset**: restore the original geometry, initial view, speed, direction, and
+  animation state.
+- **PNG**: copy the current diagram as a PNG image to the clipboard (downloads
+  it when clipboard image writing is unavailable).
 - **Keyboard**: `+`/`-`, `0`/`f` fit, arrows pan, Space play/pause.
 
 On phones the viewer starts at a legible scale rather than shrinking a wide

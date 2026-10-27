@@ -91,8 +91,8 @@ Diagram definitions are text YAML in `diagrams/`, versioned with the content —
 no binary diagram assets. The compiler uses distributed ports, obstacle-aware
 routing, and separated lanes so edges avoid boxes and parallel paths do not
 collapse into one line. The viewer adds play/pause, speed, flow direction,
-scroll/pinch zoom, right-drag panning, draggable nodes, fit, and reset; it loads
-only on pages that actually contain a diagram.
+scroll/pinch zoom, right-drag panning, draggable nodes, fit, reset, and
+clipboard PNG export; it loads only on pages that actually contain a diagram.
 
 See [docs/diagram-dsl.md](docs/diagram-dsl.md) for the YAML schema.
 
@@ -105,6 +105,10 @@ every push to `main`.
    **GitHub Actions**.
 2. Push to `main`.
 3. The site is published at <https://ajiarya.github.io/website/>.
+
+If Pages is not enabled, the workflow still builds the site, uploads a
+`site-build` artifact, and skips deployment with a warning. Enable Pages and
+re-run the workflow to publish.
 
 `base_url` in `zola.toml` is set to the project-site URL. For a custom domain,
 change `base_url` and add the domain to `static/CNAME`. For a user site, rename
@@ -139,6 +143,6 @@ the repository to `AjiArya.github.io` and update `base_url`.
   controls, and `prefers-reduced-motion` support. The viewer script is loaded
   only on diagram pages.
 - Zola minifies HTML and compresses Sass output.
-- The home page is roughly 3.2 KB HTML + 7.1 KB CSS gzipped; a diagram post is
-  roughly 6 KB HTML + the inline SVG and ~6.8 KB gzipped viewer JS (loaded only
+- The home page is roughly 3.2 KB HTML + 7.2 KB CSS gzipped; a diagram post is
+  roughly 6.1 KB HTML + the inline SVG and ~9 KB gzipped viewer JS (loaded only
   on diagram pages).

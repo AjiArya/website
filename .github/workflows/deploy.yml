@@ -17,6 +17,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      pages_enabled: ${{ steps.pages_status.outputs.enabled }}
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -39,17 +41,37 @@ jobs:
       - name: Build site
         run: cargo run --locked -- build
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
+      - name: Check Pages configuration
+        id: pages_status
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pages")
+          if [ "$status" = "200" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=GitHub Pages is not enabled::Enable Pages in Settings -> Pages -> Source: GitHub Actions, then re-run this workflow."
+          fi
 
-      - name: Upload artifact
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-build
+          path: public
+
+      - name: Configure Pages
+        if: steps.pages_status.outputs.enabled == 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: steps.pages_status.outputs.enabled == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: public
 
   deploy:
+    if: needs.build.outputs.pages_enabled == 'true'
     runs-on: ubuntu-latest
     needs: build
     environment:
