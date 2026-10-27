@@ -737,8 +737,7 @@
         background,
         caption:
           figure.querySelector("figcaption")?.textContent?.trim() || "",
-        source: figure.dataset.dgSource || "",
-        sourceUrl: figure.dataset.dgSourceUrl || "",
+        source: figure.dataset.dgSource || "@ajiarya",
       };
     }
 
@@ -756,11 +755,11 @@
             Math.min(2.5, 4096 / Math.max(base.w, base.h)),
           );
           const caption = exported.caption;
-          const source = exported.sourceUrl || exported.source;
+          const source = exported.source;
           const footer =
-            (caption ? 24 : 0) +
+            (caption ? 26 : 0) +
             (source ? 24 : 0) +
-            (caption || source ? 14 : 0);
+            (caption || source ? 18 : 0);
           const canvas = document.createElement("canvas");
           canvas.width = Math.round(base.w * scale);
           canvas.height = Math.round((base.h + footer) * scale);
@@ -770,30 +769,36 @@
           context.drawImage(image, 0, 0, canvas.width, Math.round(base.h * scale));
           URL.revokeObjectURL(url);
 
-          const muted = window
-            .getComputedStyle(document.documentElement)
-            .getPropertyValue("--ink-muted")
-            .trim() || "#7f9182";
-          context.fillStyle = muted;
-          let footerY = base.h + 20;
+          const styles = window.getComputedStyle(document.documentElement);
+          const color = (name, fallback) =>
+            styles.getPropertyValue(name).trim() || fallback;
+          const fontSans =
+            color("--font-sans", "ui-sans-serif, system-ui, sans-serif");
+          const inkSoft = color("--ink-soft", "#9aab9a");
+          const muted = color("--ink-muted", "#788579");
+
+          let footerY = base.h + 24;
           if (caption) {
-            context.font = `${Math.round(10 * scale)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+            context.fillStyle = inkSoft;
+            context.font = `500 ${Math.round(11.5 * scale)}px ${fontSans}`;
             context.fillText(
               caption,
               Math.round(20 * scale),
               Math.round(footerY * scale),
               Math.round((base.w - 40) * scale),
             );
-            footerY += 18;
+            footerY += 22;
           }
           if (source) {
-            context.font = `${Math.round(9 * scale)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+            context.fillStyle = muted;
+            context.font = `500 ${Math.round(9.5 * scale)}px ${fontSans}`;
+            context.textAlign = "right";
             context.fillText(
-              `Source: ${source}`,
-              Math.round(20 * scale),
+              source,
+              Math.round((base.w - 20) * scale),
               Math.round(footerY * scale),
-              Math.round((base.w - 40) * scale),
             );
+            context.textAlign = "left";
           }
 
           canvas.toBlob((blob) => {

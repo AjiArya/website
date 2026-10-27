@@ -92,7 +92,8 @@ no binary diagram assets. The compiler uses distributed ports, obstacle-aware
 routing, and separated lanes so edges avoid boxes and parallel paths do not
 collapse into one line. The viewer adds play/pause, speed, flow direction,
 scroll/pinch zoom, right-drag panning, draggable nodes, fit, reset, and
-clipboard PNG export; it loads only on pages that actually contain a diagram.
+clipboard PNG export with the caption and an `@ajiarya` attribution; it loads
+only on pages that actually contain a diagram.
 
 See [docs/diagram-dsl.md](docs/diagram-dsl.md) for the YAML schema.
 

@@ -158,7 +158,8 @@ Diagrams are rendered inside a fixed-height SVG canvas with a toolbar:
 - **Reset**: restore the original geometry, initial view, speed, direction, and
   animation state.
 - **PNG**: copy the current diagram as a PNG image to the clipboard (downloads
-  it when clipboard image writing is unavailable).
+  it when clipboard image writing is unavailable). The export is static, shows
+  the caption, and is signed `@ajiarya`.
 - **Keyboard**: `+`/`-`, `0`/`f` fit, arrows pan, Space play/pause.
 
 On phones the viewer starts at a legible scale rather than shrinking a wide
