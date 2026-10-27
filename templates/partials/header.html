@@ -8,16 +8,19 @@
       </span>
     </a>
 
-    <nav class="site-nav" id="site-nav" data-site-nav aria-label="Primary">
-      <a href="{{ get_url(path='@/blog/_index.md') }}">Writing</a>
-      <a href="{{ get_url(path='@/about.md') }}">About</a>
-      <a href="{{ config.extra.social.github }}" target="_blank" rel="me noopener">GitHub</a>
-      <a href="{{ config.base_url }}/atom.xml">RSS</a>
-    </nav>
-    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
-      <span class="menu-toggle__bar"></span>
-      <span class="menu-toggle__bar"></span>
-      <span class="menu-toggle__bar"></span>
-    </button>
+    <div class="site-header__actions">
+      <nav class="site-nav" id="site-nav" data-site-nav aria-label="Primary">
+        <a href="{{ get_url(path='@/blog/_index.md') }}">Writing</a>
+        <a href="{{ get_url(path='@/about.md') }}">About</a>
+        <a href="{{ config.extra.social.github }}" target="_blank" rel="me noopener">GitHub</a>
+        <a href="{{ config.base_url }}/atom.xml">RSS</a>
+      </nav>
+      <button class="terminal-trigger" type="button" data-terminal-open aria-label="Open terminal navigation" aria-keyshortcuts="/" title="Navigate (/)">/</button>
+      <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
+        <span class="menu-toggle__bar"></span>
+        <span class="menu-toggle__bar"></span>
+        <span class="menu-toggle__bar"></span>
+      </button>
+    </div>
   </div>
 </header>

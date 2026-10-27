@@ -687,17 +687,21 @@
         clones[index].setAttribute("style", declarations);
       }
 
+      // A PNG is a static artifact: remove animated packets and freeze every
+      // draw/pulse edge at its completed state.
+      clone.querySelectorAll("*").forEach((element) => {
+        element.style.animation = "none";
+        element.style.transition = "none";
+      });
       clone.querySelectorAll(".dg-edge--draw").forEach((edge) => {
-        edge.style.animation = "none";
         edge.style.strokeDashoffset = "0";
         edge.style.strokeDasharray = "1";
       });
       clone.querySelectorAll(".dg-edge--pulse").forEach((edge) => {
-        edge.style.animation = "none";
         edge.style.strokeOpacity = "1";
       });
       clone.querySelectorAll(".dg-packet").forEach((packet) => {
-        packet.style.opacity = "1";
+        packet.remove();
       });
 
       const background =
@@ -733,6 +737,8 @@
         background,
         caption:
           figure.querySelector("figcaption")?.textContent?.trim() || "",
+        source: figure.dataset.dgSource || "",
+        sourceUrl: figure.dataset.dgSourceUrl || "",
       };
     }
 
@@ -749,7 +755,12 @@
             1,
             Math.min(2.5, 4096 / Math.max(base.w, base.h)),
           );
-          const footer = exported.caption ? 58 : 0;
+          const caption = exported.caption;
+          const source = exported.sourceUrl || exported.source;
+          const footer =
+            (caption ? 24 : 0) +
+            (source ? 24 : 0) +
+            (caption || source ? 14 : 0);
           const canvas = document.createElement("canvas");
           canvas.width = Math.round(base.w * scale);
           canvas.height = Math.round((base.h + footer) * scale);
@@ -759,17 +770,28 @@
           context.drawImage(image, 0, 0, canvas.width, Math.round(base.h * scale));
           URL.revokeObjectURL(url);
 
-          if (exported.caption) {
-            const muted = window
-              .getComputedStyle(document.documentElement)
-              .getPropertyValue("--ink-muted")
-              .trim() || "#7f9182";
-            context.fillStyle = muted;
+          const muted = window
+            .getComputedStyle(document.documentElement)
+            .getPropertyValue("--ink-muted")
+            .trim() || "#7f9182";
+          context.fillStyle = muted;
+          let footerY = base.h + 20;
+          if (caption) {
             context.font = `${Math.round(10 * scale)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
             context.fillText(
-              exported.caption,
+              caption,
               Math.round(20 * scale),
-              Math.round((base.h + 28) * scale),
+              Math.round(footerY * scale),
+              Math.round((base.w - 40) * scale),
+            );
+            footerY += 18;
+          }
+          if (source) {
+            context.font = `${Math.round(9 * scale)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+            context.fillText(
+              `Source: ${source}`,
+              Math.round(20 * scale),
+              Math.round(footerY * scale),
               Math.round((base.w - 40) * scale),
             );
           }

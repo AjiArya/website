@@ -96,6 +96,14 @@ clipboard PNG export; it loads only on pages that actually contain a diagram.
 
 See [docs/diagram-dsl.md](docs/diagram-dsl.md) for the YAML schema.
 
+## Terminal navigation
+
+Press `/` anywhere outside a text field to open a terminal-style command
+palette. Filter pages, posts, tags, feeds, and external links by typing, then
+use `↑`/`↓` and `Enter` to open a destination or `Esc` to close. The `/` button
+in the header opens the same palette on touch devices. It is progressively
+enhanced: without JavaScript the regular header navigation still works.
+
 ## Deployment
 
 The included workflow builds the site and deploys `public/` to GitHub Pages on
@@ -137,8 +145,9 @@ the repository to `AjiArya.github.io` and update `base_url`.
 
 - No client-side framework, no external requests, no tracking.
 - System font stacks only: no font downloads.
-- A small stylesheet, a separate syntax-highlighting stylesheet, and a ~1 KB
-  progressive-enhancement script.
+- A small stylesheet, a separate syntax-highlighting stylesheet, and a ~2.6 KB
+  progressive-enhancement script shared by the menu, terminal navigation, and
+  copy buttons.
 - Diagrams are inline SVG with `<title>`/`<desc>`, semantic groups, keyboard
   controls, and `prefers-reduced-motion` support. The viewer script is loaded
   only on diagram pages.

@@ -1,0 +1,46 @@
+{% set blog = get_section(path="blog/_index.md") %}
+<div id="terminal-index" hidden>
+  <a data-nav-item data-kind="page" data-title="Home" data-summary="Return to the front page" data-path="/" href="{{ config.base_url }}/"></a>
+  <a data-nav-item data-kind="page" data-title="Writing" data-summary="All blog posts and notes" data-path="/blog/" href="{{ get_url(path='@/blog/_index.md') }}"></a>
+  <a data-nav-item data-kind="page" data-title="About" data-summary="Profile, experience, and how I think about platforms" data-path="/about/" href="{{ get_url(path='@/about.md') }}"></a>
+  <a data-nav-item data-kind="page" data-title="Tags" data-summary="Browse writing by topic" data-path="/tags/" href="{{ config.base_url }}/tags/"></a>
+  <a data-nav-item data-kind="feed" data-title="RSS" data-summary="Subscribe to the Atom feed" data-path="/atom.xml" href="{{ config.base_url }}/atom.xml"></a>
+  <a data-nav-item data-kind="external" data-new-tab="true" data-title="GitHub" data-summary="Open the GitHub profile" data-path="github.com/AjiArya" href="{{ config.extra.social.github }}"></a>
+  {% for post in blog.pages %}
+    <a
+      data-nav-item
+      data-kind="post"
+      data-title="{{ post.title }}"
+      data-summary="{{ post.description }}"
+      data-meta="{{ post.date | date(format='%b %d, %Y') }}"
+      data-path="{{ post.path }}"
+      data-keywords="{% if post.taxonomies.tags %}{{ post.taxonomies.tags | join(sep=' ') }}{% endif %}"
+      href="{{ post.permalink }}"
+    ></a>
+  {% endfor %}
+</div>
+
+<div class="terminal" data-terminal hidden>
+  <div class="terminal__backdrop" data-terminal-close></div>
+  <section class="terminal__window" role="dialog" aria-modal="true" aria-labelledby="terminal-title" aria-describedby="terminal-help">
+    <header class="terminal__bar">
+      <span class="terminal__status" aria-hidden="true"></span>
+      <span class="terminal__bar-title" id="terminal-title">{{ config.extra.author | lower | replace(from=" ", to="") }}@website:~</span>
+      <button class="terminal__close" type="button" data-terminal-close aria-label="Close terminal">×</button>
+    </header>
+    <div class="terminal__body">
+      <form class="terminal__form" data-terminal-form role="search">
+        <label class="visually-hidden" for="terminal-input">Navigate the site</label>
+        <span class="terminal__prompt" aria-hidden="true">$</span>
+        <input class="terminal__input" id="terminal-input" data-terminal-input type="text" autocomplete="off" spellcheck="false" placeholder="type a page, post, or topic…" aria-controls="terminal-results" aria-autocomplete="list" aria-expanded="true">
+      </form>
+      <p class="terminal__hint" id="terminal-help">↑↓ navigate · Enter open · Esc close · type / anywhere</p>
+      <div class="terminal__results" id="terminal-results" data-terminal-results role="listbox" aria-label="Site destinations"></div>
+      <p class="terminal__empty" data-terminal-empty hidden>No matching route.</p>
+    </div>
+    <footer class="terminal__footer">
+      <span>home · writing · about · tags · rss · github</span>
+      <span data-terminal-count aria-live="polite"></span>
+    </footer>
+  </section>
+</div>
