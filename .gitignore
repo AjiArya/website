@@ -1,0 +1,37 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+.DS_Store
+.direnv/
+.opencode/
+
+# Rust
+/target
+/node_modules/
+coverage/
+*.log
+
+# Zola
+/public
+
+# Local tool bootstrap
+/.tools
+
+# Generated diagrams and other build-time assets
+/generated
+
+# Browser test artifacts
+/playwright-report/
+/test-results/
+
+# Editors / OS
+*.swp
+*.swo
+.idea/
+.vscode/

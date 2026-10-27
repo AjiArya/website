@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="{{ config.default_language }}" data-theme="dark">
+<head>
+  {% include "partials/head.html" %}
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  {% include "partials/header.html" %}
+  <main id="main">
+    {% block content %}{% endblock content %}
+  </main>
+  {% include "partials/footer.html" %}
+  {% block extra_scripts %}{% endblock extra_scripts %}
+</body>
+</html>

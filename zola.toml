@@ -1,0 +1,47 @@
+# Site identity and build configuration.
+# Zola 0.23.x uses zola.toml (config.toml is still accepted for compatibility).
+base_url = "https://ajiarya.github.io/website"
+title = "Aji Arya"
+author = "Aji Arya"
+description = "Cloud engineer and architect building reliable platforms with OpenStack, Ceph, and Kubernetes."
+default_language = "en"
+compile_sass = true
+minify_html = true
+generate_feeds = true
+feed_filenames = ["atom.xml", "rss.xml"]
+generate_sitemap = true
+generate_robots_txt = true
+build_search_index = false
+taxonomies = [{ name = "tags", feed = true }]
+
+[markdown]
+smart_punctuation = true
+github_alerts = true
+insert_anchor_links = "right"
+lazy_async_image = true
+external_links_target_blank = true
+external_links_no_referrer = true
+
+[markdown.highlighting]
+style = "class"
+theme = "github-dark"
+error_on_missing_language = false
+
+[link_checker]
+internal_level = "error"
+external_level = "warn"
+
+[extra]
+author = "Aji Arya"
+role = "Cloud Engineer & Architect"
+experience = "5 years"
+tagline = "I build the layer beneath the product."
+intro = "Cloud engineer and architect working across Linux, OpenStack, Ceph, and Kubernetes. I care about the unglamorous parts: failure modes, upgrade paths, storage that heals itself, and platforms people can actually operate."
+status = "Open to conversations about platform architecture and infrastructure reliability."
+location = ""
+
+[extra.social]
+github = "https://github.com/AjiArya"
+linkedin = ""
+email = ""
+rss = "atom.xml"

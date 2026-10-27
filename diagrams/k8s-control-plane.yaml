@@ -1,0 +1,128 @@
+version: 1
+title: Kubernetes control plane on OpenStack
+description: Requests enter through an ingress gateway, reach the Kubernetes API server, and are reconciled onto worker nodes backed by Ceph storage.
+direction: TB
+padding: 32
+nodes:
+  - id: client
+    label: Client
+    icon: user
+    tone: blue
+    rank: 0
+  - id: ingress
+    label: "Ingress\ngateway"
+    icon: gateway
+    tone: cyan
+    rank: 1
+
+  - id: api
+    label: kube-apiserver
+    icon: kubernetes
+    tone: violet
+    group: control
+    rank: 2
+  - id: scheduler
+    label: kube-scheduler
+    icon: cog
+    tone: violet
+    group: control
+    rank: 2
+  - id: controller
+    label: controller-manager
+    icon: api
+    tone: violet
+    group: control
+    rank: 2
+  - id: etcd
+    label: etcd
+    icon: database
+    tone: amber
+    group: control
+    rank: 2
+
+  - id: kubelet
+    label: kubelet
+    icon: kubernetes
+    tone: green
+    group: workers
+    rank: 3
+  - id: cri
+    label: "containerd\n(CRI)"
+    icon: container
+    tone: green
+    group: workers
+    rank: 3
+  - id: csi
+    label: Ceph CSI
+    icon: storage
+    tone: green
+    group: workers
+    rank: 3
+
+  - id: mon
+    label: Ceph MON
+    icon: ceph
+    tone: amber
+    group: ceph
+    rank: 4
+  - id: osd
+    label: Ceph OSDs
+    icon: disk
+    tone: amber
+    group: ceph
+    rank: 4
+
+groups:
+  - id: control
+    label: Control plane
+    tone: violet
+  - id: workers
+    label: Worker nodes
+    tone: green
+  - id: ceph
+    label: Ceph cluster
+    tone: amber
+
+edges:
+  - from: client
+    to: ingress
+    label: HTTPS
+  - from: ingress
+    to: api
+    label: authn / authz
+  - from: api
+    to: etcd
+    label: watch
+  - from: scheduler
+    to: api
+    label: bind
+  - from: controller
+    to: api
+    label: reconcile
+  - from: api
+    to: kubelet
+    label: watch / exec
+  - from: kubelet
+    to: cri
+    label: CRI
+    animation: flow
+  - from: kubelet
+    to: csi
+    label: CSI
+  - from: csi
+    to: osd
+    label: RBD / CephFS
+    animation: flow
+  - from: mon
+    to: osd
+    label: cluster map
+
+animation:
+  preset: subtle
+  draw: true
+  flow: false
+  draw_ms: 1200
+  flow_ms: 2600
+  stagger_ms: 80
+  direction: forward
+  autoplay: true

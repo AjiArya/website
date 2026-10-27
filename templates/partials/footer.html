@@ -1,0 +1,19 @@
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <div class="site-footer__identity">
+      <p class="site-footer__name">{{ config.extra.author }}</p>
+      <p>{{ config.extra.role }} · {{ config.extra.experience }}</p>
+    </div>
+
+    <nav class="site-footer__links" aria-label="Elsewhere">
+      <a href="{{ config.extra.social.github }}" target="_blank" rel="me noopener">GitHub</a>
+      <a href="{{ config.base_url }}/atom.xml">Atom</a>
+      <a href="{{ config.base_url }}/rss.xml">RSS</a>
+      {% if config.extra.social.email %}
+        <a href="mailto:{{ config.extra.social.email }}">Email</a>
+      {% endif %}
+    </nav>
+
+    <p class="site-footer__note">Built with Zola and Rust. No tracking, no client-side framework.</p>
+  </div>
+</footer>

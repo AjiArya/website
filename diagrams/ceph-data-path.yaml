@@ -1,0 +1,99 @@
+version: 1
+title: Ceph data path
+description: Object clients authenticate against the monitor quorum, receive a cluster map, and read or write objects directly through RADOS to the OSDs.
+direction: TB
+padding: 32
+nodes:
+  - id: client
+    label: S3 / Swift client
+    icon: user
+    tone: blue
+    rank: 0
+  - id: rgw
+    label: Ceph RGW
+    icon: globe
+    tone: cyan
+    rank: 1
+
+  - id: mgr
+    label: Ceph MGR
+    icon: cog
+    tone: violet
+    group: quorum
+    rank: 1
+  - id: mon
+    label: Ceph MON
+    icon: monitor
+    tone: violet
+    group: quorum
+    rank: 1
+
+  - id: osd1
+    label: OSD 1
+    icon: disk
+    tone: amber
+    group: osds
+    rank: 2
+  - id: osd2
+    label: OSD 2
+    icon: disk
+    tone: amber
+    group: osds
+    rank: 2
+  - id: osd3
+    label: OSD 3
+    icon: disk
+    tone: amber
+    group: osds
+    rank: 2
+
+  - id: disk
+    label: "NVMe / HDD\n(BlueStore)"
+    icon: storage
+    tone: neutral
+    rank: 3
+
+groups:
+  - id: quorum
+    label: MON / MGR quorum
+    tone: violet
+  - id: osds
+    label: OSD nodes
+    tone: amber
+
+edges:
+  - from: client
+    to: rgw
+    label: S3 / Swift
+  - from: rgw
+    to: mon
+    label: auth / map
+  - from: rgw
+    to: osd1
+    label: RADOS
+    animation: flow
+  - from: rgw
+    to: osd2
+    animation: flow
+  - from: rgw
+    to: osd3
+    animation: flow
+  - from: mgr
+    to: osd2
+    label: telemetry
+  - from: osd1
+    to: disk
+  - from: osd2
+    to: disk
+  - from: osd3
+    to: disk
+
+animation:
+  preset: subtle
+  draw: true
+  flow: false
+  draw_ms: 1200
+  flow_ms: 2800
+  stagger_ms: 80
+  direction: forward
+  autoplay: true

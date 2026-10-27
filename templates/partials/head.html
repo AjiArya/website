@@ -1,0 +1,27 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% if page is defined and page.title is defined %}{{ page.title }} · {% elif section is defined and section.title is defined and section.title != config.title %}{{ section.title }} · {% endif %}{{ config.title }}</title>
+<meta name="description" content="{% if page is defined and page.description is defined and page.description %}{{ page.description }}{% elif section is defined and section.description is defined and section.description %}{{ section.description }}{% else %}{{ config.description }}{% endif %}">
+<meta name="author" content="{{ config.extra.author }}">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b0d0c">
+<link rel="canonical" href="{{ current_url | default(value=config.base_url) }}">
+
+<meta property="og:site_name" content="{{ config.title }}">
+<meta property="og:title" content="{% if page is defined and page.title is defined %}{{ page.title }}{% elif section is defined and section.title is defined %}{{ section.title }}{% else %}{{ config.title }}{% endif %}">
+<meta property="og:description" content="{% if page is defined and page.description is defined and page.description %}{{ page.description }}{% elif section is defined and section.description is defined and section.description %}{{ section.description }}{% else %}{{ config.description }}{% endif %}">
+<meta property="og:type" content="{% if page is defined and page.date is defined %}article{% else %}website{% endif %}">
+<meta property="og:url" content="{{ current_url | default(value=config.base_url) }}">
+<meta property="og:image" content="{{ config.base_url }}/images/og-default.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{% if page is defined and page.title is defined %}{{ page.title }}{% else %}{{ config.title }}{% endif %}">
+<meta name="twitter:description" content="{% if page is defined and page.description is defined and page.description %}{{ page.description }}{% else %}{{ config.description }}{% endif %}">
+<meta name="twitter:image" content="{{ config.base_url }}/images/og-default.png">
+
+<link rel="icon" href="{{ get_url(path='favicon.svg') }}" type="image/svg+xml">
+<link rel="alternate" type="application/atom+xml" title="{{ config.title }} — Atom" href="{{ config.base_url }}/atom.xml">
+<link rel="alternate" type="application/rss+xml" title="{{ config.title }} — RSS" href="{{ config.base_url }}/rss.xml">
+<link rel="stylesheet" href="{{ get_url(path='main.css', cachebust=true) }}">
+<link rel="stylesheet" href="{{ get_url(path='giallo.css', cachebust=true) }}">
+<script>document.documentElement.classList.add("js");</script>
+<script defer src="{{ get_url(path='js/site.js', cachebust=true) }}"></script>

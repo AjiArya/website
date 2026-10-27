@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header class="page-head container">
+  <p class="eyebrow">{{ page.extra.eyebrow | default(value="Page") }}</p>
+  <h1>{{ page.title }}</h1>
+  {% if page.description %}
+    <p class="page-head__lede">{{ page.description }}</p>
+  {% endif %}
+</header>
+
+<div class="container">
+  <article class="prose prose--page">
+    {{ page.content | safe }}
+  </article>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+  {% if "data-diagram" in page.content %}
+    <script defer src="{{ get_url(path='js/diagram.js', cachebust=true) }}"></script>
+  {% endif %}
+{% endblock extra_scripts %}

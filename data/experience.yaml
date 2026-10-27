@@ -1,0 +1,9 @@
+- period: "2021 — present"
+  role: Cloud Engineer & Architect
+  context: Private cloud platforms
+  summary: Design and operate the infrastructure layer — from hypervisor and network fabrics to storage and Kubernetes.
+  points:
+    - Operate OpenStack control planes and tenant networks without hidden failure modes.
+    - Run Ceph as durable storage for VMs, images, and container volumes.
+    - Build Kubernetes platforms on top of the same open-source substrate.
+    - Automate the repetitive parts so the interesting parts get attention.

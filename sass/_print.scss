@@ -1,0 +1,69 @@
+@media print {
+  :root {
+    --bg: #fff;
+    --bg-elevated: #fff;
+    --bg-subtle: #fff;
+    --ink: #000;
+    --ink-soft: #333;
+    --ink-muted: #555;
+    --rule: #ccc;
+    --rule-strong: #999;
+    --accent: #000;
+    --accent-hover: #000;
+    --code-bg: #f5f5f5;
+    --code-border: #ddd;
+    --dg-node-bg: #fff;
+    --dg-node-border: #999;
+    --dg-text: #000;
+    --dg-muted: #555;
+    --dg-edge: #666;
+    --dg-label-halo: #fff;
+    --dg-group-bg: #fff;
+    --dg-group-border: #ccc;
+    --dg-neutral: #555;
+    --dg-blue: #1f5f8f;
+    --dg-violet: #6a4b9a;
+    --dg-green: #1a7a45;
+    --dg-amber: #8a5a00;
+    --dg-red: #a33333;
+    --dg-cyan: #1f6f75;
+    --dg-pink: #8a3d62;
+  }
+
+  .site-header,
+  .site-footer,
+  .post__aside,
+  .hero__panel,
+  .post__footer,
+  .code-copy {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+    font-size: 11pt;
+  }
+
+  .prose,
+  .prose p,
+  .prose li {
+    color: #333;
+  }
+
+  .post__layout,
+  .post__header,
+  .prose,
+  .prose > * {
+    max-width: none;
+  }
+
+  .prose a {
+    color: #000;
+    text-decoration: underline;
+  }
+
+  .diagram svg {
+    min-width: 0;
+  }
+}

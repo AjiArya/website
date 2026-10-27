@@ -1,0 +1,384 @@
+.dg-svg {
+  background: transparent;
+  font-family: var(--font-sans);
+}
+
+.dg-tone-neutral {
+  --dg-tone: var(--dg-neutral);
+}
+
+.dg-tone-blue {
+  --dg-tone: var(--dg-blue);
+}
+
+.dg-tone-violet {
+  --dg-tone: var(--dg-violet);
+}
+
+.dg-tone-green {
+  --dg-tone: var(--dg-green);
+}
+
+.dg-tone-amber {
+  --dg-tone: var(--dg-amber);
+}
+
+.dg-tone-red {
+  --dg-tone: var(--dg-red);
+}
+
+.dg-tone-cyan {
+  --dg-tone: var(--dg-cyan);
+}
+
+.dg-tone-pink {
+  --dg-tone: var(--dg-pink);
+}
+
+.dg-group-box {
+  fill: var(--dg-group-bg);
+  stroke: var(--dg-group-border);
+  stroke-width: 1;
+}
+
+.dg-group-label {
+  fill: var(--dg-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dg-node-box {
+  fill: var(--dg-node-bg);
+  stroke: var(--dg-node-border);
+  stroke-width: 1.2;
+}
+
+.dg-node-accent {
+  fill: var(--dg-tone);
+}
+
+.dg-node-label {
+  fill: var(--dg-text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 560;
+}
+
+.dg-node-icon {
+  fill: none;
+  stroke: var(--dg-tone);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dg-edge {
+  fill: none;
+  stroke: var(--dg-tone);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dg-edge--draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: dg-draw var(--dg-draw-duration, 1200ms) ease forwards;
+  animation-delay: var(--dg-delay, 0ms);
+}
+
+.dg-style-dashed {
+  stroke-dasharray: 0.025 0.018;
+}
+
+.dg-style-dotted {
+  stroke-dasharray: 0.002 0.016;
+  stroke-linecap: round;
+}
+
+.dg-edge--flow {
+  stroke-dasharray: none;
+}
+
+.dg-node {
+  cursor: default;
+}
+
+.dg-node.is-moving {
+  cursor: grabbing;
+}
+
+.dg-node.is-moving .dg-node-box {
+  stroke: var(--accent);
+}
+
+.dg-packet {
+  fill: #eaffea;
+  stroke: var(--dg-tone);
+  stroke-width: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  filter:
+    drop-shadow(0 0 3px var(--dg-tone))
+    drop-shadow(0 0 9px var(--dg-tone))
+    drop-shadow(0 0 18px var(--dg-tone));
+}
+
+.diagram[data-dg-ready] .dg-packet {
+  opacity: 1;
+}
+
+.dg-edge--pulse {
+  animation: dg-pulse var(--dg-pulse-duration, 2000ms) ease-in-out infinite;
+  animation-delay: var(--dg-delay, 0ms);
+}
+
+.dg-arrow {
+  fill: var(--dg-tone);
+}
+
+.dg-edge-label {
+  fill: var(--dg-muted);
+  stroke: var(--dg-label-halo);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+@keyframes dg-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes dg-pulse {
+  0%,
+  100% {
+    stroke-opacity: 1;
+  }
+
+  50% {
+    stroke-opacity: 0.3;
+  }
+}
+
+.diagram:not([data-dg-ready]) .dg-edge {
+  animation-play-state: paused;
+}
+
+/* -------------------------------------------------------------------------
+   Interactive diagram canvas
+   ------------------------------------------------------------------------- */
+
+.diagram {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  background: var(--bg-elevated);
+  box-shadow:
+    0 0 0 1px rgba(28, 185, 0, 0.05),
+    0 20px 50px -34px rgba(0, 0, 0, 0.9);
+}
+
+.diagram__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--bg-subtle) 88%, transparent);
+}
+
+.diagram__toolbar[hidden],
+.diagram:not([data-dg-ready]) .diagram__toolbar,
+.diagram:not([data-dg-ready]) .diagram__hint {
+  display: none;
+}
+
+.diagram__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.diagram__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-decoration: none;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.diagram__button:hover {
+  border-color: var(--rule-strong);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  color: var(--accent);
+}
+
+.diagram__button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.diagram__button--value,
+.diagram__button--fit {
+  border-color: var(--rule);
+  background: color-mix(in srgb, var(--bg) 44%, transparent);
+}
+
+.diagram__button--value {
+  min-width: 42px;
+}
+
+.diagram__icon {
+  display: inline-block;
+  min-width: 1.4em;
+  text-align: center;
+}
+
+.diagram__button-label {
+  margin-left: 5px;
+}
+
+.diagram__zoom-label {
+  min-width: 52px;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+.diagram__canvas {
+  position: relative;
+  height: clamp(480px, 48vw, 620px);
+  overflow: hidden;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(28, 185, 0, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28, 185, 0, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+  cursor: default;
+  touch-action: none;
+  user-select: none;
+}
+
+.diagram__canvas:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.diagram__canvas.is-dragging {
+  cursor: grabbing;
+}
+
+.diagram__canvas svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.diagram__hint {
+  margin: 0;
+  padding: 6px 10px;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+
+.diagram__hint.is-hidden {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .diagram__toolbar {
+    padding: 6px;
+  }
+
+  .diagram__controls {
+    gap: 2px;
+  }
+
+  .diagram__button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 6px;
+  }
+
+  .diagram__button-label {
+    display: none;
+  }
+
+  .diagram__zoom-label {
+    min-width: 46px;
+    font-size: 9px;
+  }
+
+  .diagram__canvas {
+    height: clamp(320px, 56vh, 480px);
+    height: clamp(320px, 56svh, 480px);
+  }
+
+  .diagram__hint {
+    font-size: 8px;
+  }
+}
+
+@media print {
+  .diagram__toolbar,
+  .diagram__hint {
+    display: none !important;
+  }
+
+  .dg-edge {
+    animation: none !important;
+  }
+
+  .dg-packet {
+    display: none;
+  }
+
+  .diagram {
+    border: 0;
+    box-shadow: none;
+  }
+
+  .diagram__canvas {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  .diagram__canvas svg {
+    width: 100%;
+    height: auto;
+  }
+
+  .diagram figcaption {
+    font-size: 9pt;
+  }
+}

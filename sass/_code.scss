@@ -1,0 +1,70 @@
+/* Giallo's generated line wrappers (required by Zola's class-based output). */
+.giallo-l {
+  display: inline-block;
+  width: 100%;
+  min-height: 1lh;
+}
+
+.giallo-ln {
+  display: inline-block;
+  min-width: 3ch;
+  margin-right: 0.4em;
+  padding: 0.4em;
+  text-align: right;
+  user-select: none;
+  opacity: 0.45;
+}
+
+.prose pre {
+  position: relative;
+}
+
+.prose pre > code[data-lang]::before {
+  content: attr(data-lang);
+  float: right;
+  margin: -8px -8px 0 16px;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.code-copy {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  padding: 4px 7px;
+  border: 1px solid var(--code-border);
+  background: var(--code-bg);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.prose pre:hover .code-copy,
+.code-copy:focus-visible {
+  opacity: 1;
+}
+
+.code-copy:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.code-copy[data-copied="true"] {
+  border-color: var(--focus);
+  color: var(--focus);
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .code-copy {
+    opacity: 0.7;
+  }
+}

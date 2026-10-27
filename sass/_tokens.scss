@@ -1,0 +1,49 @@
+:root {
+  color-scheme: dark;
+
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  /* The display face is mono in the terminal theme. Keeping the old variable
+     name means the rest of the stylesheet does not need a parallel vocabulary. */
+  --font-serif: var(--font-mono);
+
+  --bg: #0b0d0c;
+  --bg-elevated: #101411;
+  --bg-subtle: #0f1511;
+  --ink: #d8e3d8;
+  --ink-soft: #9aab9a;
+  --ink-muted: #788579;
+  --rule: #243027;
+  --rule-strong: #344638;
+  --accent: #1cb900;
+  --accent-hover: #38d91c;
+  --accent-soft: rgba(28, 185, 0, 0.13);
+  --accent-ink: #07110a;
+  --selection: #1c4a12;
+  --focus: #1cb900;
+  --code-bg: #07110a;
+  --code-border: #243027;
+  --shadow: 0 28px 70px -42px rgba(0, 0, 0, 0.9);
+
+  --container: 1180px;
+  --measure: 68ch;
+  --gutter: clamp(20px, 4vw, 48px);
+
+  --dg-bg: transparent;
+  --dg-node-bg: #101411;
+  --dg-node-border: #2c3a30;
+  --dg-text: #d8e3d8;
+  --dg-muted: #7f9182;
+  --dg-edge: #7f9182;
+  --dg-label-halo: #0b0d0c;
+  --dg-group-bg: #101411;
+  --dg-group-border: #243027;
+  --dg-neutral: #8b9c8d;
+  --dg-blue: #79b8ff;
+  --dg-violet: #b7a1ff;
+  --dg-green: #1cb900;
+  --dg-amber: #e6c26e;
+  --dg-red: #ff8b7a;
+  --dg-cyan: #7fe0e0;
+  --dg-pink: #f3a0c8;
+}

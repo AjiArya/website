@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="not-found container">
+  <p class="eyebrow">404</p>
+  <h1>This route does not resolve.</h1>
+  <p>The page may have moved, or the link may point to something that never existed. The infrastructure is otherwise healthy.</p>
+  <div class="hero__actions">
+    <a class="button" href="{{ config.base_url }}/">Back home</a>
+    <a class="button button--ghost" href="{{ get_url(path='@/blog/_index.md') }}">Read the writing</a>
+  </div>
+</section>
+{% endblock content %}

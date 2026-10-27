@@ -1,0 +1,12 @@
+{% component toc.render(items) %}
+  <ul class="toc__list">
+    {% for item in items %}
+      <li class="toc__item toc__item--{{ item.level }}">
+        <a href="#{{ item.id }}">{{ item.title }}</a>
+        {% if item.children %}
+          {{<toc.render items={item.children} />}}
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endcomponent toc.render %}

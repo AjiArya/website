@@ -1,0 +1,16 @@
+- title: Kubernetes
+  icon: kubernetes
+  index: "01"
+  description: "Cluster design, controllers, and the sharp edges of running stateful workloads."
+- title: OpenStack
+  icon: openstack
+  index: "02"
+  description: "Control planes, networking, upgrades, and the operational shape of private cloud."
+- title: Ceph
+  icon: ceph
+  index: "03"
+  description: "Distributed storage that stays boring — placement, recovery, and failure domains."
+- title: Linux
+  icon: linux
+  index: "04"
+  description: "The substrate: performance, observability, packaging, and automation."
