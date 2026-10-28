@@ -72,6 +72,10 @@ pub struct Node {
     pub width: Option<f64>,
     #[serde(default)]
     pub height: Option<f64>,
+    #[serde(default)]
+    pub load_balancer: bool,
+    #[serde(default)]
+    pub lb_algorithm: LbAlgorithm,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -123,6 +127,25 @@ pub enum EdgeAnimation {
     Flow,
     #[serde(rename = "pulse")]
     Pulse,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum LbAlgorithm {
+    #[default]
+    RoundRobin,
+    Random,
+    LeastConnections,
+}
+
+impl LbAlgorithm {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::RoundRobin => "round-robin",
+            Self::Random => "random",
+            Self::LeastConnections => "least-connections",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Default, PartialEq, Eq)]

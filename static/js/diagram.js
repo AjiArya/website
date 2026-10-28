@@ -1,24 +1,16 @@
 (() => {
   "use strict";
 
-  const SPEEDS = [0.5, 1, 1.5, 2];
+  const SPEEDS = [0.25, 0.5, 1, 1.5, 2];
   const DIRECTIONS = ["forward", "reverse", "alternate"];
   const DIRECTION_LABELS = { forward: "→", reverse: "←", alternate: "↔" };
   const DIRECTION_NAMES = { forward: "forward", reverse: "reverse", alternate: "alternating" };
-  const PACKET_MODES = ["all", "round-robin", "random", "least-connections"];
-  const PACKET_MODE_LABELS = {
-    all: "Flow",
-    "round-robin": "RR",
-    random: "Random",
-    "least-connections": "Least",
-  };
-  const PACKET_MODE_NAMES = {
-    all: "all flows",
-    "round-robin": "round robin",
-    random: "random",
-    "least-connections": "least connections",
-  };
-  const TRAILS_PER_PACKET = 4;
+  const TRAIL_SPECS = [
+    { opacity: 0.42, width: 3.0 },
+    { opacity: 0.26, width: 2.4 },
+    { opacity: 0.14, width: 1.8 },
+    { opacity: 0.07, width: 1.2 },
+  ];
   const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
   const MOBILE = window.matchMedia("(max-width: 900px)");
   const MIN_LEGIBLE_SCALE = 0.85;
@@ -76,17 +68,28 @@
       userPaused: REDUCED_MOTION.matches || !autoplay,
       autoPaused: false,
       motionOff: false,
-      packetMode: "all",
+      multiSelect: false,
     };
 
     const playButton = figure.querySelector("[data-dg-play]");
     const playIcon = figure.querySelector("[data-dg-play-icon]");
     const playLabel = figure.querySelector("[data-dg-play-label]");
     const motionButton = figure.querySelector("[data-dg-motion]");
-    const modeButton = figure.querySelector("[data-dg-mode]");
-    const modeStatus = figure.querySelector("[data-dg-mode-status]");
+    const multiButton = figure.querySelector("[data-dg-multi]");
+    const speedControl = figure.querySelector("[data-dg-speed-control]");
     const speedButton = figure.querySelector("[data-dg-speed]");
+    const speedRange = figure.querySelector("[data-dg-speed-range]");
+    const speedTicks = Array.from(
+      figure.querySelectorAll("[data-dg-speed-tick]"),
+    );
+    const directionControl = figure.querySelector(
+      "[data-dg-direction-control]",
+    );
     const directionButton = figure.querySelector("[data-dg-direction]");
+    const directionRange = figure.querySelector("[data-dg-direction-range]");
+    const directionTicks = Array.from(
+      figure.querySelectorAll("[data-dg-direction-tick]"),
+    );
     const zoomInButton = figure.querySelector("[data-dg-zoom-in]");
     const zoomOutButton = figure.querySelector("[data-dg-zoom-out]");
     const fitButton = figure.querySelector("[data-dg-fit]");
@@ -103,6 +106,8 @@
           element,
           id: element.dataset.node,
           group: element.dataset.group || "",
+          loadBalancer: element.dataset.dgLb === "true",
+          lbAlgorithm: element.dataset.dgLbAlgorithm || "round-robin",
           base: {
             x: number(rect.getAttribute("x"), 0),
             y: number(rect.getAttribute("y"), 0),
@@ -150,11 +155,15 @@
       .map((circle) => {
         const edge = edges[number(circle.dataset.dgEdge, -1)];
         if (!edge) return null;
+        const source = nodeById.get(edge.from);
+        const loadBalancer = Boolean(source?.loadBalancer);
         return {
           circle,
           edge,
-          phase: (edge.delayMs / flowMs) % 1,
-          active: true,
+          phase: loadBalancer ? 0 : (edge.delayMs / flowMs) % 1,
+          active: !loadBalancer,
+          loadBalancer,
+          algorithm: source?.lbAlgorithm || "round-robin",
           connections: 0,
           lastDispatch: 0,
           trails: [],
@@ -162,35 +171,35 @@
       })
       .filter(Boolean);
 
-    // A short comet tail behind every packet. The circles are generated here
-    // rather than in the SVG source so static exports stay lean.
+    // The tail is drawn as fading segments on the edge itself, so the glow
+    // stays on the line rather than following the packet as a blob.
     for (const packet of packets) {
       const group = packet.circle.parentNode;
-      const radius = number(packet.circle.getAttribute("r"), 4.5);
       const tone = Array.from(packet.circle.classList).find((name) =>
         name.startsWith("dg-tone-"),
       );
-      for (let index = 1; index <= TRAILS_PER_PACKET; index += 1) {
+      TRAIL_SPECS.forEach((spec, index) => {
         const trail = document.createElementNS(
           "http://www.w3.org/2000/svg",
-          "circle",
+          "path",
         );
         trail.setAttribute(
           "class",
           `dg-packet-trail${tone ? ` ${tone}` : ""}`,
         );
-        trail.setAttribute("r", f(Math.max(1.2, radius - index * 0.7)));
-        trail.setAttribute("cx", "0");
-        trail.setAttribute("cy", "0");
-        trail.setAttribute("opacity", "0");
+        trail.setAttribute("fill", "none");
+        trail.setAttribute("stroke-linecap", "round");
+        trail.setAttribute("stroke-linejoin", "round");
+        trail.style.strokeWidth = String(spec.width);
+        trail.style.opacity = "0";
         trail.dataset.dgEdge = packet.circle.dataset.dgEdge || "";
         group.insertBefore(trail, packet.circle);
         packet.trails.push({
-          circle: trail,
-          offset: index,
-          opacity: 0.3 * (1 - (index - 1) / TRAILS_PER_PACKET),
+          path: trail,
+          index,
+          opacity: spec.opacity,
         });
-      }
+      });
     }
 
     const animatedEdges = Array.from(svg.querySelectorAll(".dg-edge")).filter(
@@ -221,6 +230,7 @@
     const originalPacketPhases = packets.map((packet) => packet.phase);
 
     const pointers = new Map();
+    const selectedNodes = new Set();
     let drag = null;
     let nodeDrag = null;
     let pinch = null;
@@ -326,8 +336,8 @@
     function updateHintText() {
       if (!hint) return;
       hint.textContent = MOBILE.matches
-        ? "Drag to pan · Pinch to zoom · Drag a node to move"
-        : "Right-drag to pan · Scroll to zoom · Drag a node to move";
+        ? "Drag to pan · Pinch to zoom · Tap Multi to select nodes · Drag a group"
+        : "Right-drag to pan · Shift-click to multi-select · Drag a group to move it";
     }
 
     function zoomBy(factor, clientX, clientY) {
@@ -498,10 +508,10 @@
       }
     }
 
-    function updateIncidentEdges(movedNode) {
+    function updateIncidentEdges(movedIds) {
       for (const edge of edges) {
-        const fromMoved = edge.from === movedNode.id;
-        const toMoved = edge.to === movedNode.id;
+        const fromMoved = movedIds.has(edge.from);
+        const toMoved = movedIds.has(edge.to);
         if (!fromMoved && !toMoved) continue;
 
         const fromNode = nodeById.get(edge.from);
@@ -511,8 +521,18 @@
         // Keep untouched edges byte-for-byte identical. For incident edges,
         // translate the original ports and elbows so the obstacle-aware route
         // survives the drag instead of being rerouted through other nodes.
+        const sameOffset =
+          Math.abs(fromNode.tx - toNode.tx) < 0.01 &&
+          Math.abs(fromNode.ty - toNode.ty) < 0.01;
+
         let label = null;
-        if (
+        if (fromMoved && toMoved && sameOffset) {
+          const points = edge.points.map((point) => ({
+            x: point.x + fromNode.tx,
+            y: point.y + fromNode.ty,
+          }));
+          edge.path.setAttribute("d", pointsToPath(points));
+        } else if (
           (fromMoved && toMoved) ||
           edge.route !== "elbow" ||
           edge.points.length < 3
@@ -598,25 +618,23 @@
       return packet.phase;
     }
 
-    function trailPoint(packet, length, offset) {
-      const direction = directionForEdge(packet.edge);
-      let movingForward = true;
-      if (direction === "reverse") {
-        movingForward = false;
-      } else if (direction === "alternate") {
-        movingForward = packet.phase < 0.5;
+    function trailSegment(path, length, start, end) {
+      const from = clamp(start, 0, 1) * length;
+      const to = clamp(end, 0, 1) * length;
+      const steps = Math.max(2, Math.ceil(Math.abs(to - from) / 5));
+      let d = "";
+      for (let step = 0; step <= steps; step += 1) {
+        const point = path.getPointAtLength(
+          from + ((to - from) * step) / steps,
+        );
+        d += `${step === 0 ? "M" : " L"} ${f(point.x)} ${f(point.y)}`;
       }
-      const gap = Math.min(12, Math.max(5, length * 0.05));
-      const distance =
-        packetProgress(packet) * length +
-        (movingForward ? -1 : 1) * offset * gap;
-      if (distance < 0 || distance > length) return null;
-      return packet.edge.path.getPointAtLength(distance);
+      return d;
     }
 
     function packetVisible(packet) {
       if (state.motionOff) return false;
-      return state.packetMode === "all" || packet.active;
+      return packet.loadBalancer ? packet.active : true;
     }
 
     function positionPackets() {
@@ -626,23 +644,42 @@
         packet.circle.style.opacity = visible ? "1" : "0";
         if (!length) continue;
 
-        const point = packet.edge.path.getPointAtLength(
-          packetProgress(packet) * length,
-        );
+        const progress = packetProgress(packet);
+        const point = packet.edge.path.getPointAtLength(progress * length);
         packet.circle.setAttribute("cx", f(point.x));
         packet.circle.setAttribute("cy", f(point.y));
 
+        const direction = directionForEdge(packet.edge);
+        let movingForward = true;
+        if (direction === "reverse") {
+          movingForward = false;
+        } else if (direction === "alternate") {
+          movingForward = packet.phase < 0.5;
+        }
+        const segment = Math.min(26, Math.max(8, length * 0.06)) / length;
+        const gap = Math.min(8, Math.max(3, length * 0.03)) / length;
+
         for (const trail of packet.trails) {
-          const position = visible
-            ? trailPoint(packet, length, trail.offset)
-            : null;
-          if (!position) {
-            trail.circle.style.opacity = "0";
+          let start;
+          let end;
+          if (movingForward) {
+            end = progress - trail.index * (segment + gap);
+            start = end - segment;
+          } else {
+            start = progress + trail.index * (segment + gap);
+            end = start + segment;
+          }
+
+          if (!visible || start < 0 || end > 1) {
+            trail.path.style.opacity = "0";
             continue;
           }
-          trail.circle.setAttribute("cx", f(position.x));
-          trail.circle.setAttribute("cy", f(position.y));
-          trail.circle.style.opacity = String(trail.opacity);
+
+          trail.path.setAttribute(
+            "d",
+            trailSegment(packet.edge.path, length, start, end),
+          );
+          trail.path.style.opacity = String(trail.opacity);
         }
       }
     }
@@ -650,12 +687,14 @@
     function buildDispatchers() {
       const bySource = new Map();
       for (const packet of packets) {
+        if (!packet.loadBalancer) continue;
         const source = packet.edge.from || "";
         if (!bySource.has(source)) bySource.set(source, []);
         bySource.get(source).push(packet);
       }
       dispatchers = Array.from(bySource.values()).map((members) => ({
         packets: members,
+        algorithm: members[0].algorithm,
         cursor: 0,
         nextAt: 0,
       }));
@@ -663,9 +702,8 @@
 
     function resetPacketState() {
       packets.forEach((packet, index) => {
-        packet.phase =
-          state.packetMode === "all" ? originalPacketPhases[index] : 0;
-        packet.active = state.packetMode === "all";
+        packet.phase = packet.loadBalancer ? 0 : originalPacketPhases[index];
+        packet.active = !packet.loadBalancer;
         packet.connections = 0;
         packet.lastDispatch = 0;
       });
@@ -683,9 +721,9 @@
       }
 
       let packet = null;
-      if (state.packetMode === "random") {
+      if (dispatcher.algorithm === "random") {
         packet = idle[Math.floor(Math.random() * idle.length)];
-      } else if (state.packetMode === "least-connections") {
+      } else if (dispatcher.algorithm === "least-connections") {
         packet = idle.reduce((best, candidate) => {
           const bestLoad = best.connections || 0;
           const candidateLoad = candidate.connections || 0;
@@ -746,27 +784,25 @@
       packetLast = now;
       const delta = deltaTime / (flowMs / state.speed);
 
-      if (state.packetMode === "all") {
-        for (const packet of packets) {
+      for (const dispatcher of dispatchers) {
+        if (now >= dispatcher.nextAt) {
+          dispatchPacket(dispatcher, now);
+        }
+      }
+      for (const packet of packets) {
+        if (!packet.loadBalancer) {
           packet.phase = (packet.phase + delta) % 1;
+          continue;
         }
-      } else {
-        for (const dispatcher of dispatchers) {
-          if (now >= dispatcher.nextAt) {
-            dispatchPacket(dispatcher, now);
-          }
-        }
-        for (const packet of packets) {
-          if (!packet.active) continue;
-          packet.phase += delta;
-          if (packet.phase >= 1) {
-            packet.phase = 0;
-            packet.active = false;
-            packet.connections = Math.max(
-              0,
-              (packet.connections || 0) - 1,
-            );
-          }
+        if (!packet.active) continue;
+        packet.phase += delta;
+        if (packet.phase >= 1) {
+          packet.phase = 0;
+          packet.active = false;
+          packet.connections = Math.max(
+            0,
+            (packet.connections || 0) - 1,
+          );
         }
       }
 
@@ -814,6 +850,10 @@
         "aria-label",
         `Animation speed: ${state.speed}x`,
       );
+      if (speedRange) speedRange.value = String(state.speedIndex);
+      speedTicks.forEach((tick, index) => {
+        tick.classList.toggle("is-active", index === state.speedIndex);
+      });
     }
 
     function updateDirectionLabel() {
@@ -823,6 +863,11 @@
         "aria-label",
         `Flow direction: ${DIRECTION_NAMES[state.direction]}`,
       );
+      const index = DIRECTIONS.indexOf(state.direction);
+      if (directionRange) directionRange.value = String(index);
+      directionTicks.forEach((tick, tickIndex) => {
+        tick.classList.toggle("is-active", tickIndex === index);
+      });
     }
 
     function edgeBaseDuration(edge) {
@@ -843,23 +888,6 @@
         state.motionOff ? "Enable animation" : "Disable animation",
       );
       motionButton.setAttribute("aria-pressed", String(state.motionOff));
-    }
-
-    function updatePacketModeButton() {
-      if (!modeButton) return;
-      modeButton.textContent = PACKET_MODE_LABELS[state.packetMode];
-      const name = PACKET_MODE_NAMES[state.packetMode];
-      modeButton.setAttribute(
-        "aria-label",
-        `Packet distribution: ${name}`,
-      );
-      modeButton.setAttribute(
-        "title",
-        `Packet distribution: ${name} (click to change)`,
-      );
-      if (modeStatus) {
-        modeStatus.textContent = `Packet distribution: ${name}.`;
-      }
     }
 
     function updateAnimations() {
@@ -900,7 +928,6 @@
       syncPackets();
       updatePlayButton();
       updateMotionButton();
-      updatePacketModeButton();
     }
 
     function togglePlay() {
@@ -914,20 +941,13 @@
       updateAnimations();
     }
 
-    function cyclePacketMode() {
-      const next =
-        (PACKET_MODES.indexOf(state.packetMode) + 1) % PACKET_MODES.length;
-      state.packetMode = PACKET_MODES[next];
-      resetPacketState();
-      updateAnimations();
-      positionPackets();
-    }
-
     function resetLayout() {
       nodeDrag = null;
       drag = null;
       pinch = null;
       pointers.clear();
+      selectedNodes.clear();
+      updateSelectionStyles();
       canvas.classList.remove("is-dragging");
 
       nodes.forEach((node, index) => {
@@ -975,7 +995,6 @@
       state.userPaused = REDUCED_MOTION.matches || !autoplay;
       state.autoPaused = !onScreen || tabHidden;
       state.motionOff = false;
-      state.packetMode = "all";
       resetPacketState();
 
       updateSpeedLabel();
@@ -1308,6 +1327,51 @@
       return null;
     }
 
+    function closestGroup(element) {
+      let current = element;
+      while (current && current !== canvas) {
+        if (
+          current.classList &&
+          current.classList.contains("dg-group")
+        ) {
+          return current;
+        }
+        current = current.parentNode;
+      }
+      return null;
+    }
+
+    function updateSelectionStyles() {
+      for (const node of nodes) {
+        node.element.classList.toggle(
+          "is-selected",
+          selectedNodes.has(node.id),
+        );
+      }
+      for (const group of groups) {
+        const members = nodes.filter((node) => node.group === group.id);
+        const selected =
+          members.length > 0 &&
+          members.every((node) => selectedNodes.has(node.id));
+        group.element.classList.toggle("is-selected", selected);
+      }
+    }
+
+    function selectionList() {
+      return nodes.filter((node) => selectedNodes.has(node.id));
+    }
+
+    function updateMultiButton() {
+      if (!multiButton) return;
+      multiButton.setAttribute("aria-pressed", String(state.multiSelect));
+      multiButton.setAttribute(
+        "title",
+        state.multiSelect
+          ? "Multi-select is on; tap nodes to add or remove"
+          : "Toggle multi-select; tap nodes to add or remove",
+      );
+    }
+
     function startPan(event) {
       drag = {
         id: event.pointerId,
@@ -1322,37 +1386,143 @@
     function startNodeDrag(element, event) {
       const node = nodeById.get(element.dataset.node);
       if (!node) return false;
+
+      const toggle =
+        event.shiftKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        state.multiSelect;
+      const wasSelected = selectedNodes.has(node.id);
+
+      if (toggle) {
+        if (!wasSelected) selectedNodes.add(node.id);
+      } else if (!wasSelected) {
+        selectedNodes.clear();
+        selectedNodes.add(node.id);
+      }
+      updateSelectionStyles();
+
+      const moving = selectionList();
+      if (!moving.length) {
+        selectedNodes.add(node.id);
+        moving.push(node);
+      }
+
       nodeDrag = {
         id: event.pointerId,
-        node,
+        focus: node,
+        nodes: moving.map((item) => ({
+          node: item,
+          startTx: item.tx,
+          startTy: item.ty,
+        })),
         startX: event.clientX,
         startY: event.clientY,
-        startTx: node.tx,
-        startTy: node.ty,
+        moved: false,
+        toggle: toggle ? node : null,
+        wasSelected,
+        collapse: !toggle && wasSelected && selectedNodes.size > 1,
       };
-      node.element.classList.add("is-moving");
+      for (const item of nodeDrag.nodes) {
+        item.node.element.classList.add("is-moving");
+      }
+      return true;
+    }
+
+    function startGroupDrag(element, event) {
+      const group = groups.find((item) => item.id === element.dataset.group);
+      if (!group) return false;
+      const members = nodes.filter((node) => node.group === group.id);
+      if (!members.length) return false;
+
+      const add =
+        event.shiftKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        state.multiSelect;
+      if (!add) selectedNodes.clear();
+      for (const member of members) selectedNodes.add(member.id);
+      updateSelectionStyles();
+
+      nodeDrag = {
+        id: event.pointerId,
+        focus: null,
+        nodes: selectionList().map((node) => ({
+          node,
+          startTx: node.tx,
+          startTy: node.ty,
+        })),
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false,
+        toggle: null,
+        wasSelected: false,
+        collapse: false,
+      };
+      for (const item of nodeDrag.nodes) {
+        item.node.element.classList.add("is-moving");
+      }
       return true;
     }
 
     // Animation controls
     playButton?.addEventListener("click", togglePlay);
     motionButton?.addEventListener("click", toggleMotion);
-    modeButton?.addEventListener("click", cyclePacketMode);
+    multiButton?.addEventListener("click", () => {
+      state.multiSelect = !state.multiSelect;
+      updateMultiButton();
+    });
 
     speedButton?.addEventListener("click", () => {
-      state.speedIndex = (state.speedIndex + 1) % SPEEDS.length;
-      state.speed = SPEEDS[state.speedIndex];
+      directionControl?.classList.remove("is-open");
+      speedControl?.classList.add("is-open");
+      window.requestAnimationFrame(() => speedRange?.focus());
+    });
+
+    speedRange?.addEventListener("input", () => {
+      const index = clamp(
+        number(speedRange.value, state.speedIndex),
+        0,
+        SPEEDS.length - 1,
+      );
+      state.speedIndex = index;
+      state.speed = SPEEDS[index];
       updateSpeedLabel();
       updateAnimations();
     });
 
     directionButton?.addEventListener("click", () => {
-      const next =
-        (DIRECTIONS.indexOf(state.direction) + 1) % DIRECTIONS.length;
-      state.direction = DIRECTIONS[next];
+      speedControl?.classList.remove("is-open");
+      directionControl?.classList.add("is-open");
+      window.requestAnimationFrame(() => directionRange?.focus());
+    });
+
+    directionRange?.addEventListener("input", () => {
+      const index = clamp(
+        number(directionRange.value, DIRECTIONS.indexOf(state.direction)),
+        0,
+        DIRECTIONS.length - 1,
+      );
+      state.direction = DIRECTIONS[index];
       updateDirectionLabel();
       updateAnimations();
       positionPackets();
+    });
+
+    speedControl?.addEventListener("mouseenter", () => {
+      directionControl?.classList.remove("is-open");
+    });
+    directionControl?.addEventListener("mouseenter", () => {
+      speedControl?.classList.remove("is-open");
+    });
+
+    document.addEventListener("pointerdown", (event) => {
+      if (speedControl && !speedControl.contains(event.target)) {
+        speedControl.classList.remove("is-open");
+      }
+      if (directionControl && !directionControl.contains(event.target)) {
+        directionControl.classList.remove("is-open");
+      }
     });
 
     // View controls
@@ -1372,17 +1542,35 @@
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
       if (pointers.size === 1) {
-        const nodeElement = closestNode(event.target);
-        if (nodeElement && (!isMouse || event.button === 0)) {
-          if (startNodeDrag(nodeElement, event)) {
-            event.preventDefault();
-            return;
-          }
+        const left = !isMouse || event.button === 0;
+        const nodeElement = left ? closestNode(event.target) : null;
+        if (nodeElement && startNodeDrag(nodeElement, event)) {
+          event.preventDefault();
+          return;
+        }
+
+        const groupElement = left ? closestGroup(event.target) : null;
+        if (groupElement && startGroupDrag(groupElement, event)) {
+          event.preventDefault();
+          return;
+        }
+
+        if (
+          left &&
+          !event.shiftKey &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !state.multiSelect
+        ) {
+          selectedNodes.clear();
+          updateSelectionStyles();
         }
         startPan(event);
       } else {
         if (nodeDrag) {
-          nodeDrag.node.element.classList.remove("is-moving");
+          for (const item of nodeDrag.nodes) {
+            item.node.element.classList.remove("is-moving");
+          }
           nodeDrag = null;
         }
         drag = null;
@@ -1396,15 +1584,29 @@
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
       if (nodeDrag && nodeDrag.id === event.pointerId) {
-        const dx = (event.clientX - nodeDrag.startX) / state.scale;
-        const dy = (event.clientY - nodeDrag.startY) / state.scale;
-        nodeDrag.node.tx = nodeDrag.startTx + dx;
-        nodeDrag.node.ty = nodeDrag.startTy + dy;
-        nodeDrag.node.element.setAttribute(
-          "transform",
-          `translate(${f(nodeDrag.node.tx)} ${f(nodeDrag.node.ty)})`,
-        );
-        updateIncidentEdges(nodeDrag.node);
+        const screenDx = event.clientX - nodeDrag.startX;
+        const screenDy = event.clientY - nodeDrag.startY;
+        if (!nodeDrag.moved) {
+          if (Math.hypot(screenDx, screenDy) < 3) {
+            event.preventDefault();
+            return;
+          }
+          nodeDrag.moved = true;
+        }
+
+        const dx = screenDx / state.scale;
+        const dy = screenDy / state.scale;
+        const movedIds = new Set();
+        for (const item of nodeDrag.nodes) {
+          item.node.tx = item.startTx + dx;
+          item.node.ty = item.startTy + dy;
+          item.node.element.setAttribute(
+            "transform",
+            `translate(${f(item.node.tx)} ${f(item.node.ty)})`,
+          );
+          movedIds.add(item.node.id);
+        }
+        updateIncidentEdges(movedIds);
         updateGroups();
         hideHint();
         event.preventDefault();
@@ -1449,8 +1651,23 @@
 
     const endPointer = (event) => {
       if (nodeDrag && nodeDrag.id === event.pointerId) {
-        nodeDrag.node.element.classList.remove("is-moving");
+        if (!nodeDrag.moved) {
+          if (nodeDrag.toggle) {
+            if (nodeDrag.wasSelected) {
+              selectedNodes.delete(nodeDrag.toggle.id);
+            } else {
+              selectedNodes.add(nodeDrag.toggle.id);
+            }
+          } else if (nodeDrag.collapse && nodeDrag.focus) {
+            selectedNodes.clear();
+            selectedNodes.add(nodeDrag.focus.id);
+          }
+        }
+        for (const item of nodeDrag.nodes) {
+          item.node.element.classList.remove("is-moving");
+        }
         nodeDrag = null;
+        updateSelectionStyles();
       }
       if (!pointers.has(event.pointerId)) return;
       pointers.delete(event.pointerId);
@@ -1522,6 +1739,13 @@
           togglePlay();
           event.preventDefault();
           break;
+        case "Escape":
+          if (selectedNodes.size) {
+            selectedNodes.clear();
+            updateSelectionStyles();
+            event.preventDefault();
+          }
+          break;
         default:
           break;
       }
@@ -1570,6 +1794,7 @@
 
     updateSpeedLabel();
     updateDirectionLabel();
+    updateMultiButton();
     updateHintText();
     MOBILE.addEventListener("change", updateHintText);
 

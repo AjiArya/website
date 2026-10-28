@@ -209,10 +209,12 @@ fn render_node(svg: &mut String, node: &LayoutNode) {
     };
     write!(
         svg,
-        r#"<g class="dg-node dg-tone-{}" data-node="{}" data-group="{}"><rect class="dg-node-box" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" rx="{:.1}"/><rect class="dg-node-accent" x="{:.1}" y="{:.1}" width="3" height="{:.1}" rx="1.5"/>"#,
+        r#"<g class="dg-node dg-tone-{}" data-node="{}" data-group="{}" data-dg-lb="{}" data-dg-lb-algorithm="{}"><rect class="dg-node-box" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" rx="{:.1}"/><rect class="dg-node-accent" x="{:.1}" y="{:.1}" width="3" height="{:.1}" rx="1.5"/>"#,
         escape_attr(&node.tone),
         escape_attr(&node.id),
         escape_attr(node.group.as_deref().unwrap_or("")),
+        node.load_balancer,
+        node.lb_algorithm.as_str(),
         rect.x,
         rect.y,
         rect.w,

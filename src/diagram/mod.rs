@@ -239,6 +239,35 @@ edges:
     }
 
     #[test]
+    fn load_balancer_node_serializes_algorithm_and_flow() {
+        let yaml = r#"
+version: 1
+title: Load balancer
+nodes:
+  - id: lb
+    label: Load balancer
+    load_balancer: true
+    lb_algorithm: random
+  - id: a
+    label: A
+  - id: b
+    label: B
+edges:
+  - from: lb
+    to: a
+    animation: flow
+  - from: lb
+    to: b
+    animation: flow
+"#;
+        let svg = render_yaml(yaml, "lb", false).unwrap();
+        assert!(svg.contains(r#"data-dg-lb="true""#));
+        assert!(svg.contains(r#"data-dg-lb-algorithm="random""#));
+        assert!(svg.contains("dg-edge--flow"));
+        assert_eq!(svg.matches("dg-packet ").count(), 2);
+    }
+
+    #[test]
     fn rejects_duplicate_node_ids() {
         let yaml = r#"
 version: 1

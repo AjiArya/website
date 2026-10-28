@@ -4,8 +4,8 @@ use anyhow::Result;
 use unicode_width::UnicodeWidthStr;
 
 use crate::diagram::model::{
-    AnimationDirection, Arrow, Diagram, Direction, EdgeAnimation, EdgeStyle, LayoutMode, Route,
-    Shape,
+    AnimationDirection, Arrow, Diagram, Direction, EdgeAnimation, EdgeStyle, LayoutMode,
+    LbAlgorithm, Route, Shape,
 };
 use crate::diagram::router;
 
@@ -63,6 +63,8 @@ pub struct LayoutNode {
     pub shape: Shape,
     pub rect: Rect,
     pub group: Option<String>,
+    pub load_balancer: bool,
+    pub lb_algorithm: LbAlgorithm,
 }
 
 #[derive(Debug, Clone)]
@@ -127,6 +129,8 @@ pub fn layout(diagram: &Diagram, prefix: &str) -> Result<DiagramLayout> {
                     h,
                 },
                 group: node.group.clone(),
+                load_balancer: node.load_balancer,
+                lb_algorithm: node.lb_algorithm,
             }
         })
         .collect();

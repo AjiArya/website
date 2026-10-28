@@ -5,10 +5,31 @@
     <div class="diagram__controls" role="group" aria-label="Animation">
       <button class="diagram__button" type="button" data-dg-play aria-label="Pause animation" title="Pause animation"><span class="diagram__icon" data-dg-play-icon aria-hidden="true">❚❚</span><span class="diagram__button-label" data-dg-play-label>Pause</span></button>
       <button class="diagram__button diagram__button--value" type="button" data-dg-motion aria-label="Disable animation" title="Disable animation">Disable</button>
-      <button class="diagram__button diagram__button--value" type="button" data-dg-mode aria-label="Packet distribution: all flows" title="Change packet distribution">Flow</button>
-      <button class="diagram__button diagram__button--value" type="button" data-dg-speed aria-label="Animation speed: 1x" title="Change animation speed">1×</button>
-      <button class="diagram__button diagram__button--value" type="button" data-dg-direction aria-label="Animation direction: alternating" title="Change animation direction">↔</button>
-      <span class="visually-hidden" data-dg-mode-status aria-live="polite"></span>
+      <button class="diagram__button diagram__button--value" type="button" data-dg-multi aria-label="Toggle multi-select" title="Toggle multi-select; tap nodes to add or remove" aria-pressed="false">Multi</button>
+      <div class="diagram__popover" data-dg-speed-control>
+        <button class="diagram__button diagram__button--value" type="button" data-dg-speed aria-label="Animation speed: 1x" title="Animation speed" aria-haspopup="true">1×</button>
+        <div class="diagram__popover-panel" data-dg-speed-panel>
+          <input class="diagram__range" type="range" min="0" max="4" step="1" value="2" data-dg-speed-range aria-label="Animation speed">
+          <div class="diagram__ticks" aria-hidden="true">
+            <span data-dg-speed-tick>0.25×</span>
+            <span data-dg-speed-tick>0.5×</span>
+            <span data-dg-speed-tick>1×</span>
+            <span data-dg-speed-tick>1.5×</span>
+            <span data-dg-speed-tick>2×</span>
+          </div>
+        </div>
+      </div>
+      <div class="diagram__popover diagram__popover--end" data-dg-direction-control>
+        <button class="diagram__button diagram__button--value" type="button" data-dg-direction aria-label="Animation direction: alternating" title="Animation direction" aria-haspopup="true">↔</button>
+        <div class="diagram__popover-panel" data-dg-direction-panel>
+          <input class="diagram__range" type="range" min="0" max="2" step="1" value="2" data-dg-direction-range aria-label="Flow direction">
+          <div class="diagram__ticks" aria-hidden="true">
+            <span data-dg-direction-tick>→</span>
+            <span data-dg-direction-tick>←</span>
+            <span data-dg-direction-tick>↔</span>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="diagram__controls" role="group" aria-label="Zoom">
       <button class="diagram__button" type="button" data-dg-zoom-out aria-label="Zoom out" title="Zoom out">−</button>

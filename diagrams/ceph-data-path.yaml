@@ -14,6 +14,8 @@ nodes:
     icon: globe
     tone: cyan
     rank: 1
+    load_balancer: true
+    lb_algorithm: round-robin
 
   - id: mgr
     label: Ceph MGR

@@ -79,11 +79,22 @@ edges:
   at: [120, 80]            # required in manual mode; top-left in px
   width: 180               # optional
   height: 52               # optional
+  load_balancer: true      # optional; distribute packets across outgoing edges
+  lb_algorithm: round-robin # optional: round-robin | random | least-connections
 ```
 
 The auto layout computes node sizes from label width, so `width`/`height` are
 usually unnecessary. Node labels wrap at roughly 26 characters and are capped at
 three lines.
+
+### Load balancing
+
+A node marked `load_balancer: true` distributes its outgoing **flow** packets
+instead of starting every edge packet at once. Set `animation: flow` on the
+edges that should carry requests; other outgoing edges keep their configured
+animation. Use `lb_algorithm` to choose `round-robin` (default), `random`, or
+`least-connections`; the algorithm is applied per load-balancer node in the
+viewer, with no global mode switch.
 
 ## Group fields
 
@@ -150,27 +161,32 @@ Diagrams are rendered inside a fixed-height SVG canvas with a toolbar:
 - **Play/Pause**: start or freeze the animation at its current position.
 - **Disable/Enable**: turn motion off entirely; packets and trails hide and the
   draw-in/pulse effects settle at their completed state.
-- **Packet distribution**: Flow (all edges), round robin, random, and least
-  connections. Non-Flow modes dispatch one packet at a time per source node,
-  like a load balancer spreading requests across its backends.
-- **Speed**: 0.5×, 1×, 1.5×, 2×.
-- **Direction**: forward, reverse, alternating (the default).
+- **Speed**: hover or focus the speed value for a slider with 0.25×, 0.5×, 1×,
+  1.5×, and 2× stops.
+- **Direction**: hover or focus the arrow for a slider with forward, reverse,
+  and alternating (the default) stops.
 - **Zoom**: mouse wheel over the canvas, buttons, `+`/`-`, or pinch.
-- **Pan**: right-drag, drag empty canvas space, or arrow keys when focused.
-- **Move nodes**: hold and drag any node. Only the node and its incident edges
-  move; other routes stay untouched, and incident elbows are translated rather
-  than rerouted through the diagram.
+- **Pan**: right-drag, drag empty canvas space outside groups, or arrow keys when
+  focused.
+- **Move nodes**: drag any node. Shift-click (or turn on **Multi** and tap) to
+  select several nodes, then drag any selected node to move the whole set. Only
+  selected nodes and their incident edges move; other routes stay untouched,
+  and incident elbows are translated rather than rerouted through the diagram.
+- **Move groups**: drag a group box or label; every node inside the group moves
+  with it and keeps its relative position.
 - **Fit**: show the whole diagram.
 - **Reset**: restore the original geometry, initial view, speed, direction, and
-  animation state.
+  animation state, and clear the current selection.
 - **PNG**: copy the current diagram as a PNG image to the clipboard (downloads
   it when clipboard image writing is unavailable). The export is static, shows
   the caption and an inline `@ajiarya` credit on the same row, and is sized
   dynamically so the caption stays readable.
-- **Keyboard**: `+`/`-`, `0`/`f` fit, arrows pan, Space play/pause.
+- **Keyboard**: `+`/`-`, `0`/`f` fit, arrows pan, Space play/pause, Escape
+  clears the selection.
 
-Packets leave a short glowing trail behind the moving light. The trail follows
-the current direction, including the reverse leg of alternating flow.
+Packets leave a glowing trail drawn directly on the edge behind the moving
+light. The trail follows the current direction, including the reverse leg of
+alternating flow.
 
 On phones the viewer starts at a legible scale rather than shrinking a wide
 diagram into a strip. The page itself does not scroll horizontally; the canvas
