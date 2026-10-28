@@ -124,5 +124,5 @@ animation:
   draw_ms: 1200
   flow_ms: 2600
   stagger_ms: 80
-  direction: forward
+  direction: alternate
   autoplay: true

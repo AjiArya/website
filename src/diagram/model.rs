@@ -128,9 +128,9 @@ pub enum EdgeAnimation {
 #[derive(Debug, Clone, Copy, Deserialize, Default, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum AnimationDirection {
-    #[default]
     Forward,
     Reverse,
+    #[default]
     Alternate,
 }
 
@@ -205,7 +205,7 @@ impl Default for Animation {
             draw_ms: 1200,
             flow_ms: 2600,
             stagger_ms: 80,
-            direction: AnimationDirection::Forward,
+            direction: AnimationDirection::Alternate,
             autoplay: true,
         }
     }

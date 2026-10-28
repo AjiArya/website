@@ -121,6 +121,7 @@
   stroke-width: 1.2;
   opacity: 0;
   pointer-events: none;
+  transition: opacity 120ms ease;
   filter:
     drop-shadow(0 0 3px var(--dg-tone))
     drop-shadow(0 0 9px var(--dg-tone))
@@ -129,6 +130,17 @@
 
 .diagram[data-dg-ready] .dg-packet {
   opacity: 1;
+}
+
+.dg-packet-trail {
+  fill: var(--dg-tone);
+  stroke: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  filter:
+    drop-shadow(0 0 5px var(--dg-tone))
+    drop-shadow(0 0 11px var(--dg-tone));
 }
 
 .dg-edge--pulse {

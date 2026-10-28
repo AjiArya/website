@@ -3,8 +3,22 @@
 
   const SPEEDS = [0.5, 1, 1.5, 2];
   const DIRECTIONS = ["forward", "reverse", "alternate"];
-  const DIRECTION_LABELS = { forward: "→", reverse: "←", alternate: "⇄" };
+  const DIRECTION_LABELS = { forward: "→", reverse: "←", alternate: "↔" };
   const DIRECTION_NAMES = { forward: "forward", reverse: "reverse", alternate: "alternating" };
+  const PACKET_MODES = ["all", "round-robin", "random", "least-connections"];
+  const PACKET_MODE_LABELS = {
+    all: "Flow",
+    "round-robin": "RR",
+    random: "Random",
+    "least-connections": "Least",
+  };
+  const PACKET_MODE_NAMES = {
+    all: "all flows",
+    "round-robin": "round robin",
+    random: "random",
+    "least-connections": "least connections",
+  };
+  const TRAILS_PER_PACKET = 4;
   const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
   const MOBILE = window.matchMedia("(max-width: 900px)");
   const MIN_LEGIBLE_SCALE = 0.85;
@@ -18,6 +32,16 @@
     DIRECTIONS.includes(value) ? value : null;
   const speedLabel = (speed) => `${speed}×`;
   const f = (value) => Number(value).toFixed(1);
+  const parsePathPoints = (d) => {
+    const numbers = (d.match(/-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi) || []).map(Number);
+    const points = [];
+    for (let index = 0; index + 1 < numbers.length; index += 2) {
+      points.push({ x: numbers[index], y: numbers[index + 1] });
+    }
+    return points;
+  };
+  const pointsToPath = (points) =>
+    `M ${points.map((point) => `${f(point.x)} ${f(point.y)}`).join(" L ")}`;
 
   document.querySelectorAll("[data-diagram]").forEach(init);
 
@@ -36,7 +60,8 @@
     const drawMs = number(svg.dataset.dgDrawMs, 1200);
     const flowMs = number(svg.dataset.dgFlowMs, 2600);
     const pulseMs = 2000;
-    const initialDirection = normalizeDirection(svg.dataset.dgDirection) || "forward";
+    const initialDirection =
+      normalizeDirection(svg.dataset.dgDirection) || "alternate";
     const autoplay = svg.dataset.dgAutoplay !== "false";
 
     const state = {
@@ -50,11 +75,16 @@
       direction: initialDirection,
       userPaused: REDUCED_MOTION.matches || !autoplay,
       autoPaused: false,
+      motionOff: false,
+      packetMode: "all",
     };
 
     const playButton = figure.querySelector("[data-dg-play]");
     const playIcon = figure.querySelector("[data-dg-play-icon]");
     const playLabel = figure.querySelector("[data-dg-play-label]");
+    const motionButton = figure.querySelector("[data-dg-motion]");
+    const modeButton = figure.querySelector("[data-dg-mode]");
+    const modeStatus = figure.querySelector("[data-dg-mode-status]");
     const speedButton = figure.querySelector("[data-dg-speed]");
     const directionButton = figure.querySelector("[data-dg-direction]");
     const zoomInButton = figure.querySelector("[data-dg-zoom-in]");
@@ -107,6 +137,7 @@
           path.style.getPropertyValue("--dg-delay").replace("ms", ""),
           0,
         ),
+        points: parsePathPoints(path.getAttribute("d")),
         label: null,
       }),
     );
@@ -123,9 +154,44 @@
           circle,
           edge,
           phase: (edge.delayMs / flowMs) % 1,
+          active: true,
+          connections: 0,
+          lastDispatch: 0,
+          trails: [],
         };
       })
       .filter(Boolean);
+
+    // A short comet tail behind every packet. The circles are generated here
+    // rather than in the SVG source so static exports stay lean.
+    for (const packet of packets) {
+      const group = packet.circle.parentNode;
+      const radius = number(packet.circle.getAttribute("r"), 4.5);
+      const tone = Array.from(packet.circle.classList).find((name) =>
+        name.startsWith("dg-tone-"),
+      );
+      for (let index = 1; index <= TRAILS_PER_PACKET; index += 1) {
+        const trail = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "circle",
+        );
+        trail.setAttribute(
+          "class",
+          `dg-packet-trail${tone ? ` ${tone}` : ""}`,
+        );
+        trail.setAttribute("r", f(Math.max(1.2, radius - index * 0.7)));
+        trail.setAttribute("cx", "0");
+        trail.setAttribute("cy", "0");
+        trail.setAttribute("opacity", "0");
+        trail.dataset.dgEdge = packet.circle.dataset.dgEdge || "";
+        group.insertBefore(trail, packet.circle);
+        packet.trails.push({
+          circle: trail,
+          offset: index,
+          opacity: 0.3 * (1 - (index - 1) / TRAILS_PER_PACKET),
+        });
+      }
+    }
 
     const animatedEdges = Array.from(svg.querySelectorAll(".dg-edge")).filter(
       (edge) =>
@@ -163,6 +229,7 @@
     let tabHidden = false;
     let packetFrame = 0;
     let packetLast = 0;
+    let dispatchers = [];
 
     function updateAutoPause() {
       state.autoPaused = !onScreen || tabHidden;
@@ -404,20 +471,78 @@
       return { d, label };
     }
 
-    function updateEdges() {
+    function shiftStart(points, dx, dy) {
+      const old = points[0];
+      const next = { x: old.x + dx, y: old.y + dy };
+      points[0] = next;
+      if (points.length < 2) return;
+      const second = points[1];
+      if (Math.abs(second.x - old.x) < 0.01) {
+        second.x = next.x;
+      } else if (Math.abs(second.y - old.y) < 0.01) {
+        second.y = next.y;
+      }
+    }
+
+    function shiftEnd(points, dx, dy) {
+      const last = points.length - 1;
+      const old = points[last];
+      const next = { x: old.x + dx, y: old.y + dy };
+      points[last] = next;
+      if (last < 1) return;
+      const previous = points[last - 1];
+      if (Math.abs(previous.x - old.x) < 0.01) {
+        previous.x = next.x;
+      } else if (Math.abs(previous.y - old.y) < 0.01) {
+        previous.y = next.y;
+      }
+    }
+
+    function updateIncidentEdges(movedNode) {
       for (const edge of edges) {
+        const fromMoved = edge.from === movedNode.id;
+        const toMoved = edge.to === movedNode.id;
+        if (!fromMoved && !toMoved) continue;
+
         const fromNode = nodeById.get(edge.from);
         const toNode = nodeById.get(edge.to);
         if (!fromNode || !toNode) continue;
-        const geometry = routeGeometry(
-          currentRect(fromNode),
-          currentRect(toNode),
-          edge.route,
-        );
-        edge.path.setAttribute("d", geometry.d);
+
+        // Keep untouched edges byte-for-byte identical. For incident edges,
+        // translate the original ports and elbows so the obstacle-aware route
+        // survives the drag instead of being rerouted through other nodes.
+        let label = null;
+        if (
+          (fromMoved && toMoved) ||
+          edge.route !== "elbow" ||
+          edge.points.length < 3
+        ) {
+          const geometry = routeGeometry(
+            currentRect(fromNode),
+            currentRect(toNode),
+            edge.route,
+          );
+          edge.path.setAttribute("d", geometry.d);
+          label = geometry.label;
+        } else {
+          const points = edge.points.map((point) => ({ ...point }));
+          if (fromMoved) {
+            shiftStart(points, fromNode.tx, fromNode.ty);
+          }
+          if (toMoved) {
+            shiftEnd(points, toNode.tx, toNode.ty);
+          }
+          edge.path.setAttribute("d", pointsToPath(points));
+        }
+
         if (edge.label) {
-          edge.label.setAttribute("x", f(geometry.label.x));
-          edge.label.setAttribute("y", f(geometry.label.y - 7));
+          if (!label) {
+            const length = edge.path.getTotalLength();
+            const middle = edge.path.getPointAtLength(length / 2);
+            label = { x: middle.x, y: middle.y + 7 };
+          }
+          edge.label.setAttribute("x", f(label.x));
+          edge.label.setAttribute("y", f(label.y - 7));
         }
       }
       positionPackets();
@@ -473,21 +598,142 @@
       return packet.phase;
     }
 
+    function trailPoint(packet, length, offset) {
+      const direction = directionForEdge(packet.edge);
+      let movingForward = true;
+      if (direction === "reverse") {
+        movingForward = false;
+      } else if (direction === "alternate") {
+        movingForward = packet.phase < 0.5;
+      }
+      const gap = Math.min(12, Math.max(5, length * 0.05));
+      const distance =
+        packetProgress(packet) * length +
+        (movingForward ? -1 : 1) * offset * gap;
+      if (distance < 0 || distance > length) return null;
+      return packet.edge.path.getPointAtLength(distance);
+    }
+
+    function packetVisible(packet) {
+      if (state.motionOff) return false;
+      return state.packetMode === "all" || packet.active;
+    }
+
     function positionPackets() {
       for (const packet of packets) {
         const length = packet.edge.path.getTotalLength();
+        const visible = packetVisible(packet);
+        packet.circle.style.opacity = visible ? "1" : "0";
         if (!length) continue;
+
         const point = packet.edge.path.getPointAtLength(
           packetProgress(packet) * length,
         );
         packet.circle.setAttribute("cx", f(point.x));
         packet.circle.setAttribute("cy", f(point.y));
+
+        for (const trail of packet.trails) {
+          const position = visible
+            ? trailPoint(packet, length, trail.offset)
+            : null;
+          if (!position) {
+            trail.circle.style.opacity = "0";
+            continue;
+          }
+          trail.circle.setAttribute("cx", f(position.x));
+          trail.circle.setAttribute("cy", f(position.y));
+          trail.circle.style.opacity = String(trail.opacity);
+        }
       }
+    }
+
+    function buildDispatchers() {
+      const bySource = new Map();
+      for (const packet of packets) {
+        const source = packet.edge.from || "";
+        if (!bySource.has(source)) bySource.set(source, []);
+        bySource.get(source).push(packet);
+      }
+      dispatchers = Array.from(bySource.values()).map((members) => ({
+        packets: members,
+        cursor: 0,
+        nextAt: 0,
+      }));
+    }
+
+    function resetPacketState() {
+      packets.forEach((packet, index) => {
+        packet.phase =
+          state.packetMode === "all" ? originalPacketPhases[index] : 0;
+        packet.active = state.packetMode === "all";
+        packet.connections = 0;
+        packet.lastDispatch = 0;
+      });
+      dispatchers.forEach((dispatcher) => {
+        dispatcher.cursor = 0;
+        dispatcher.nextAt = 0;
+      });
+    }
+
+    function dispatchPacket(dispatcher, now) {
+      const idle = dispatcher.packets.filter((packet) => !packet.active);
+      if (!idle.length) {
+        dispatcher.nextAt = now + 120;
+        return;
+      }
+
+      let packet = null;
+      if (state.packetMode === "random") {
+        packet = idle[Math.floor(Math.random() * idle.length)];
+      } else if (state.packetMode === "least-connections") {
+        packet = idle.reduce((best, candidate) => {
+          const bestLoad = best.connections || 0;
+          const candidateLoad = candidate.connections || 0;
+          if (candidateLoad < bestLoad) return candidate;
+          if (
+            candidateLoad === bestLoad &&
+            (candidate.lastDispatch || 0) < (best.lastDispatch || 0)
+          ) {
+            return candidate;
+          }
+          return best;
+        }, idle[0]);
+      } else {
+        const total = dispatcher.packets.length;
+        for (let step = 0; step < total; step += 1) {
+          const index = (dispatcher.cursor + step) % total;
+          const candidate = dispatcher.packets[index];
+          if (!candidate.active) {
+            packet = candidate;
+            dispatcher.cursor = (index + 1) % total;
+            break;
+          }
+        }
+      }
+
+      if (!packet) {
+        dispatcher.nextAt = now + 120;
+        return;
+      }
+
+      packet.active = true;
+      packet.connections = (packet.connections || 0) + 1;
+      packet.lastDispatch = now;
+      packet.phase = 0;
+
+      const interval = Math.max(
+        280,
+        flowMs / Math.max(1, dispatcher.packets.length),
+      );
+      dispatcher.nextAt = now + interval / state.speed;
     }
 
     function packetRunning() {
       return (
-        !state.userPaused && !state.autoPaused && packets.length > 0
+        !state.motionOff &&
+        !state.userPaused &&
+        !state.autoPaused &&
+        packets.length > 0
       );
     }
 
@@ -499,9 +745,31 @@
       const deltaTime = Math.min(64, Math.max(0, now - packetLast));
       packetLast = now;
       const delta = deltaTime / (flowMs / state.speed);
-      for (const packet of packets) {
-        packet.phase = (packet.phase + delta) % 1;
+
+      if (state.packetMode === "all") {
+        for (const packet of packets) {
+          packet.phase = (packet.phase + delta) % 1;
+        }
+      } else {
+        for (const dispatcher of dispatchers) {
+          if (now >= dispatcher.nextAt) {
+            dispatchPacket(dispatcher, now);
+          }
+        }
+        for (const packet of packets) {
+          if (!packet.active) continue;
+          packet.phase += delta;
+          if (packet.phase >= 1) {
+            packet.phase = 0;
+            packet.active = false;
+            packet.connections = Math.max(
+              0,
+              (packet.connections || 0) - 1,
+            );
+          }
+        }
       }
+
       positionPackets();
       packetFrame = window.requestAnimationFrame(packetTick);
     }
@@ -523,6 +791,14 @@
 
     function updatePlayButton() {
       if (!playButton) return;
+      playButton.disabled = state.motionOff;
+      if (state.motionOff) {
+        if (playIcon) playIcon.textContent = "■";
+        if (playLabel) playLabel.textContent = "Off";
+        playButton.setAttribute("aria-label", "Animation is disabled");
+        playButton.setAttribute("title", "Animation is disabled");
+        return;
+      }
       const paused = state.userPaused;
       if (playIcon) playIcon.textContent = paused ? "▶" : "❚❚";
       if (playLabel) playLabel.textContent = paused ? "Play" : "Pause";
@@ -555,8 +831,40 @@
       return 0;
     }
 
+    function updateMotionButton() {
+      if (!motionButton) return;
+      motionButton.textContent = state.motionOff ? "Enable" : "Disable";
+      motionButton.setAttribute(
+        "aria-label",
+        state.motionOff ? "Enable animation" : "Disable animation",
+      );
+      motionButton.setAttribute(
+        "title",
+        state.motionOff ? "Enable animation" : "Disable animation",
+      );
+      motionButton.setAttribute("aria-pressed", String(state.motionOff));
+    }
+
+    function updatePacketModeButton() {
+      if (!modeButton) return;
+      modeButton.textContent = PACKET_MODE_LABELS[state.packetMode];
+      const name = PACKET_MODE_NAMES[state.packetMode];
+      modeButton.setAttribute(
+        "aria-label",
+        `Packet distribution: ${name}`,
+      );
+      modeButton.setAttribute(
+        "title",
+        `Packet distribution: ${name} (click to change)`,
+      );
+      if (modeStatus) {
+        modeStatus.textContent = `Packet distribution: ${name}.`;
+      }
+    }
+
     function updateAnimations() {
-      const running = !state.userPaused && !state.autoPaused;
+      const running =
+        !state.motionOff && !state.userPaused && !state.autoPaused;
       animatedEdges.forEach((edge) => {
         if (edge.classList.contains("dg-edge--flow")) {
           edge.style.animation = "";
@@ -564,16 +872,55 @@
         }
         const baseDuration = edgeBaseDuration(edge);
         if (!baseDuration) return;
+
+        if (state.motionOff) {
+          edge.style.animation = "none";
+          edge.dataset.dgFrozen = "true";
+          if (edge.classList.contains("dg-edge--draw")) {
+            edge.style.strokeDashoffset = "0";
+            edge.style.strokeDasharray = "1";
+          } else {
+            edge.style.strokeOpacity = "1";
+          }
+          return;
+        }
+
+        if (edge.dataset.dgFrozen) {
+          if (!running) return;
+          edge.style.animation = "";
+          edge.style.strokeDashoffset = "";
+          edge.style.strokeDasharray = "";
+          edge.style.strokeOpacity = "";
+          delete edge.dataset.dgFrozen;
+        }
+
         edge.style.animationDuration = `${baseDuration / state.speed}ms`;
         edge.style.animationPlayState = running ? "running" : "paused";
       });
       syncPackets();
       updatePlayButton();
+      updateMotionButton();
+      updatePacketModeButton();
     }
 
     function togglePlay() {
+      if (state.motionOff) return;
       state.userPaused = !state.userPaused;
       updateAnimations();
+    }
+
+    function toggleMotion() {
+      state.motionOff = !state.motionOff;
+      updateAnimations();
+    }
+
+    function cyclePacketMode() {
+      const next =
+        (PACKET_MODES.indexOf(state.packetMode) + 1) % PACKET_MODES.length;
+      state.packetMode = PACKET_MODES[next];
+      resetPacketState();
+      updateAnimations();
+      positionPackets();
     }
 
     function resetLayout() {
@@ -627,6 +974,9 @@
       state.direction = initialDirection;
       state.userPaused = REDUCED_MOTION.matches || !autoplay;
       state.autoPaused = !onScreen || tabHidden;
+      state.motionOff = false;
+      state.packetMode = "all";
+      resetPacketState();
 
       updateSpeedLabel();
       updateDirectionLabel();
@@ -641,12 +991,14 @@
       }
 
       // Restart draw-in animations from the beginning, matching a fresh load.
-      animatedEdges.forEach((edge) => {
-        if (!edge.classList.contains("dg-edge--draw")) return;
-        edge.style.animation = "none";
-        void edge.getBoundingClientRect();
-        edge.style.animation = "";
-      });
+      if (!state.motionOff) {
+        animatedEdges.forEach((edge) => {
+          if (!edge.classList.contains("dg-edge--draw")) return;
+          edge.style.animation = "none";
+          void edge.getBoundingClientRect();
+          edge.style.animation = "";
+        });
+      }
       updateAnimations();
     }
 
@@ -700,7 +1052,7 @@
       clone.querySelectorAll(".dg-edge--pulse").forEach((edge) => {
         edge.style.strokeOpacity = "1";
       });
-      clone.querySelectorAll(".dg-packet").forEach((packet) => {
+      clone.querySelectorAll(".dg-packet, .dg-packet-trail").forEach((packet) => {
         packet.remove();
       });
 
@@ -741,6 +1093,22 @@
       };
     }
 
+    function ellipsize(context, text, maxWidth) {
+      if (context.measureText(text).width <= maxWidth) return text;
+      let low = 0;
+      let high = text.length;
+      while (low < high) {
+        const middle = Math.ceil((low + high) / 2);
+        const candidate = `${text.slice(0, middle).trimEnd()}…`;
+        if (context.measureText(candidate).width <= maxWidth) {
+          low = middle;
+        } else {
+          high = middle - 1;
+        }
+      }
+      return `${text.slice(0, low).trimEnd()}…`;
+    }
+
     function renderDiagramPng() {
       return new Promise((resolve, reject) => {
         const exported = buildDiagramExport();
@@ -756,10 +1124,7 @@
           );
           const caption = exported.caption;
           const source = exported.source;
-          const footer =
-            (caption ? 26 : 0) +
-            (source ? 24 : 0) +
-            (caption || source ? 18 : 0);
+          const footer = caption || source ? 38 : 0;
           const canvas = document.createElement("canvas");
           canvas.width = Math.round(base.w * scale);
           canvas.height = Math.round((base.h + footer) * scale);
@@ -777,27 +1142,56 @@
           const inkSoft = color("--ink-soft", "#9aab9a");
           const muted = color("--ink-muted", "#788579");
 
-          let footerY = base.h + 24;
+          const padding = 20 * scale;
+          const baseline = (base.h + 22) * scale;
+          const creditSize = 9;
+          context.font = `500 ${Math.max(1, creditSize * scale)}px ${fontSans}`;
+          const creditWidth = source ? context.measureText(source).width : 0;
+          const gap = source ? 12 * scale : 0;
+          const captionWidth = Math.max(
+            1,
+            canvas.width - padding * 2 - creditWidth - gap,
+          );
+
+          let captionSize = 11.5;
+          let captionText = caption;
+          if (caption) {
+            const setCaptionFont = () => {
+              context.font = `500 ${Math.max(
+                1,
+                captionSize * scale,
+              )}px ${fontSans}`;
+            };
+            setCaptionFont();
+            while (
+              captionSize > 7.5 &&
+              context.measureText(caption).width > captionWidth
+            ) {
+              captionSize -= 0.25;
+              setCaptionFont();
+            }
+            if (context.measureText(caption).width > captionWidth) {
+              captionText = ellipsize(context, caption, captionWidth);
+            }
+          }
+
           if (caption) {
             context.fillStyle = inkSoft;
-            context.font = `500 ${Math.round(11.5 * scale)}px ${fontSans}`;
-            context.fillText(
-              caption,
-              Math.round(20 * scale),
-              Math.round(footerY * scale),
-              Math.round((base.w - 40) * scale),
-            );
-            footerY += 22;
+            context.font = `500 ${Math.max(
+              1,
+              captionSize * scale,
+            )}px ${fontSans}`;
+            context.textAlign = "left";
+            context.fillText(captionText, padding, baseline);
           }
           if (source) {
             context.fillStyle = muted;
-            context.font = `500 ${Math.round(9.5 * scale)}px ${fontSans}`;
+            context.font = `500 ${Math.max(
+              1,
+              creditSize * scale,
+            )}px ${fontSans}`;
             context.textAlign = "right";
-            context.fillText(
-              source,
-              Math.round((base.w - 20) * scale),
-              Math.round(footerY * scale),
-            );
+            context.fillText(source, canvas.width - padding, baseline);
             context.textAlign = "left";
           }
 
@@ -942,6 +1336,8 @@
 
     // Animation controls
     playButton?.addEventListener("click", togglePlay);
+    motionButton?.addEventListener("click", toggleMotion);
+    modeButton?.addEventListener("click", cyclePacketMode);
 
     speedButton?.addEventListener("click", () => {
       state.speedIndex = (state.speedIndex + 1) % SPEEDS.length;
@@ -1008,7 +1404,7 @@
           "transform",
           `translate(${f(nodeDrag.node.tx)} ${f(nodeDrag.node.ty)})`,
         );
-        updateEdges();
+        updateIncidentEdges(nodeDrag.node);
         updateGroups();
         hideHint();
         event.preventDefault();
@@ -1178,6 +1574,7 @@
     MOBILE.addEventListener("change", updateHintText);
 
     window.requestAnimationFrame(() => {
+      buildDispatchers();
       initialView();
       positionPackets();
       updateAnimations();

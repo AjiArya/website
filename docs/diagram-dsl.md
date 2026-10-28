@@ -129,7 +129,7 @@ animation:
   draw_ms: 1200       # draw-in duration, 100–10000
   flow_ms: 2600       # flow cycle duration, 200–10000
   stagger_ms: 80      # 0–2000; per-edge delay
-  direction: forward  # forward | reverse | alternate
+  direction: alternate # forward | reverse | alternate
   autoplay: true      # false starts paused
 ```
 
@@ -139,28 +139,38 @@ path length for the draw-in. `direction` on an edge overrides the global
 direction for that flow. The packet animation is part of the interactive
 viewer, so a static/standalone SVG keeps the solid line without the packet.
 
-The default is deliberately calm: 2.6s flow cycles and a 1.2s draw-in. The
-viewer starts paused when the reader prefers reduced motion, and pauses when
-the diagram is off-screen.
+The default is deliberately calm: 2.6s flow cycles, a 1.2s draw-in, and
+alternating flow so packets travel out and back. The viewer starts paused when
+the reader prefers reduced motion, and pauses when the diagram is off-screen.
 
 ## Interactive viewer
 
 Diagrams are rendered inside a fixed-height SVG canvas with a toolbar:
 
-- **Play/Pause** animation.
+- **Play/Pause**: start or freeze the animation at its current position.
+- **Disable/Enable**: turn motion off entirely; packets and trails hide and the
+  draw-in/pulse effects settle at their completed state.
+- **Packet distribution**: Flow (all edges), round robin, random, and least
+  connections. Non-Flow modes dispatch one packet at a time per source node,
+  like a load balancer spreading requests across its backends.
 - **Speed**: 0.5×, 1×, 1.5×, 2×.
-- **Direction**: forward, reverse, alternating.
+- **Direction**: forward, reverse, alternating (the default).
 - **Zoom**: mouse wheel over the canvas, buttons, `+`/`-`, or pinch.
 - **Pan**: right-drag, drag empty canvas space, or arrow keys when focused.
-- **Move nodes**: hold and drag any node; connected edges and group boxes
-  follow the node.
+- **Move nodes**: hold and drag any node. Only the node and its incident edges
+  move; other routes stay untouched, and incident elbows are translated rather
+  than rerouted through the diagram.
 - **Fit**: show the whole diagram.
 - **Reset**: restore the original geometry, initial view, speed, direction, and
   animation state.
 - **PNG**: copy the current diagram as a PNG image to the clipboard (downloads
   it when clipboard image writing is unavailable). The export is static, shows
-  the caption, and is signed `@ajiarya`.
+  the caption and an inline `@ajiarya` credit on the same row, and is sized
+  dynamically so the caption stays readable.
 - **Keyboard**: `+`/`-`, `0`/`f` fit, arrows pan, Space play/pause.
+
+Packets leave a short glowing trail behind the moving light. The trail follows
+the current direction, including the reverse leg of alternating flow.
 
 On phones the viewer starts at a legible scale rather than shrinking a wide
 diagram into a strip. The page itself does not scroll horizontally; the canvas

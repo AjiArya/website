@@ -203,7 +203,7 @@ edges:
         assert!(svg.contains("request-path-title"));
         assert!(svg.contains("dg-node-icon"));
         assert!(svg.contains(r#"data-dg-flow-ms="2600""#));
-        assert!(svg.contains(r#"data-dg-direction="forward""#));
+        assert!(svg.contains(r#"data-dg-direction="alternate""#));
         assert!(svg.contains(r#"data-dg-autoplay="true""#));
         assert!(svg.contains(r#"data-dg-route="elbow""#));
     }
