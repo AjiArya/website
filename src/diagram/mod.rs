@@ -184,6 +184,8 @@ edges:
   - from: client
     to: api
     label: HTTPS
+animation:
+  draw: true
 "#;
 
     #[test]

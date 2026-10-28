@@ -135,7 +135,7 @@ midpoint; curves use a cubic Bézier. Arrow markers are generated per tone.
 ```yaml
 animation:
   preset: subtle      # none | subtle | showcase
-  draw: true          # draw-in for edges when preset is subtle/showcase
+  draw: false         # optional draw-in when preset is subtle/showcase
   flow: false         # packet flow when preset is showcase
   draw_ms: 1200       # draw-in duration, 100–10000
   flow_ms: 2600       # flow cycle duration, 200–10000
@@ -150,27 +150,29 @@ path length for the draw-in. `direction` on an edge overrides the global
 direction for that flow. The packet animation is part of the interactive
 viewer, so a static/standalone SVG keeps the solid line without the packet.
 
-The default is deliberately calm: 2.6s flow cycles, a 1.2s draw-in, and
-alternating flow so packets travel out and back. The viewer starts paused when
-the reader prefers reduced motion, and pauses when the diagram is off-screen.
+The default is deliberately calm: 2.6s flow cycles and alternating flow so
+packets travel out and back. Draw-in is off by default so links appear fully
+drawn on first load; set `draw: true` explicitly to opt into the wipe. The
+viewer starts paused when the reader prefers reduced motion, and pauses when the
+diagram is off-screen.
 
 ## Interactive viewer
 
 Diagrams are rendered inside a fixed-height SVG canvas with a toolbar:
 
-- **Play/Pause**: start or freeze the animation at its current position.
-- **Disable/Enable**: turn motion off entirely; packets and trails hide and the
-  draw-in/pulse effects settle at their completed state.
+- **Animation menu**: hover, focus, or click the animation button for **Play**,
+  **Pause**, and **Disable**. Disable hides packets and trails and settles
+  draw/pulse effects at their completed state.
 - **Speed**: hover or focus the speed value for a slider with 0.25×, 0.5×, 1×,
   1.5×, and 2× stops.
-- **Direction**: hover or focus the arrow for a slider with forward, reverse,
-  and alternating (the default) stops.
+- **Direction**: hover, focus, or click the arrow for clickable **Forward**,
+  **Reverse**, and **Alternating** (default) options.
 - **Zoom**: mouse wheel over the canvas, buttons, `+`/`-`, or pinch.
 - **Pan**: right-drag on desktop, drag empty canvas space on touch, or use the
   arrow keys when the canvas is focused.
 - **Select**: left-drag an empty area to draw a selection box around nodes.
-  Hold Shift (or turn on **Multi**) to add to the current selection; a plain
-  click on empty canvas clears it.
+  Hold Shift to add to the current selection; a plain click on empty canvas
+  clears it.
 - **Move nodes**: drag any node. Select several nodes by box or Shift-click,
   then drag any selected node to move the whole set. Only selected nodes and
   their incident edges move; other routes stay untouched, and incident elbows

@@ -295,6 +295,10 @@
   text-align: center;
 }
 
+.diagram__button--direction {
+  font-size: 18px;
+}
+
 .diagram__button-label {
   margin-left: 5px;
 }
@@ -336,6 +340,55 @@
 .diagram__popover--end .diagram__popover-panel {
   right: 0;
   left: auto;
+}
+
+.diagram__popover[data-dg-animation-control] .diagram__popover-panel {
+  right: auto;
+  left: 0;
+}
+
+.diagram__options-panel {
+  width: 168px;
+  padding: 6px;
+}
+
+.diagram__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.diagram__option:hover,
+.diagram__option:focus-visible {
+  border-color: var(--rule-strong);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  color: var(--accent);
+  outline: none;
+}
+
+.diagram__option.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.diagram__option-icon {
+  width: 16px;
+  font-size: 14px;
+  text-align: center;
 }
 
 .diagram__popover:hover .diagram__popover-panel,
@@ -457,10 +510,30 @@
   }
 
   .diagram__popover-panel {
-    right: 0;
-    left: auto;
+    right: auto;
+    left: 0;
     width: 188px;
     padding: 12px 14px 10px;
+  }
+
+  .diagram__popover--end .diagram__popover-panel,
+  .diagram__popover[data-dg-animation-control] .diagram__popover-panel {
+    right: auto;
+    left: 0;
+  }
+
+  .diagram__popover[data-dg-animation-control] .diagram__popover-panel {
+    width: 168px;
+  }
+
+  .diagram__options-panel {
+    width: 168px;
+    padding: 6px;
+  }
+
+  .diagram__option {
+    min-height: 44px;
+    font-size: 11px;
   }
 
   .diagram__range {

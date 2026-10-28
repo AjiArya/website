@@ -223,7 +223,7 @@ impl Default for Animation {
     fn default() -> Self {
         Self {
             preset: Preset::Subtle,
-            draw: true,
+            draw: false,
             flow: false,
             draw_ms: 1200,
             flow_ms: 2600,

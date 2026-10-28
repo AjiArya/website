@@ -92,7 +92,7 @@ edges:
 
 animation:
   preset: subtle
-  draw: true
+  draw: false
   flow: false
   draw_ms: 1200
   flow_ms: 2800

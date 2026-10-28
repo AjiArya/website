@@ -90,12 +90,12 @@ Diagrams are referenced from Markdown with a Tera component:
 Diagram definitions are text YAML in `diagrams/`, versioned with the content —
 no binary diagram assets. The compiler uses distributed ports, obstacle-aware
 routing, and separated lanes so edges avoid boxes and parallel paths do not
-collapse into one line. The viewer adds play/pause/disable, hover speed and
-direction sliders, two-way direction by default, per-node load-balancer packet
-distribution (round robin, random, least connections), on-edge trailing glow,
-box and multi-select, group dragging, scroll/pinch zoom, right-drag panning, fit,
-reset, and a one-row caption/credit PNG export; it loads only on pages that
-actually contain a diagram.
+collapse into one line. The viewer adds a play/pause/disable menu, a speed
+slider, clickable direction options (two-way by default), per-node load-balancer
+packet distribution (round robin, random, least connections), on-edge trailing
+glow, box and shift multi-select, group dragging, scroll/pinch zoom, right-drag
+panning, fit, reset, and a one-row caption/credit PNG export; it loads only on
+pages that actually contain a diagram.
 
 See [docs/diagram-dsl.md](docs/diagram-dsl.md) for the YAML schema.
 
@@ -164,6 +164,6 @@ the repository to `AjiArya.github.io` and update `base_url`.
   controls, and `prefers-reduced-motion` support. The viewer script is loaded
   only on diagram pages.
 - Zola minifies HTML and compresses Sass output.
-- The home page is roughly 3.2 KB HTML + 8.6 KB CSS gzipped; a diagram post is
-  roughly 6.8 KB HTML + the inline SVG and ~14 KB gzipped viewer JS (loaded only
+- The home page is roughly 3.2 KB HTML + 8.7 KB CSS gzipped; a diagram post is
+  roughly 6.8 KB HTML + the inline SVG and ~15 KB gzipped viewer JS (loaded only
   on diagram pages).

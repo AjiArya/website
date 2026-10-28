@@ -34,6 +34,30 @@
   };
   const pointsToPath = (points) =>
     `M ${points.map((point) => `${f(point.x)} ${f(point.y)}`).join(" L ")}`;
+  const pathSide = (points, atStart) => {
+    if (points.length < 2) return null;
+    const a = atStart ? points[0] : points[points.length - 2];
+    const b = atStart ? points[1] : points[points.length - 1];
+    if (Math.abs(a.x - b.x) < 0.01) {
+      if (b.y > a.y) return atStart ? "bottom" : "top";
+      return atStart ? "top" : "bottom";
+    }
+    if (Math.abs(a.y - b.y) < 0.01) {
+      if (b.x > a.x) return atStart ? "right" : "left";
+      return atStart ? "left" : "right";
+    }
+    return null;
+  };
+  const simplifyPoints = (points) => {
+    const clean = [];
+    for (const point of points) {
+      const last = clean[clean.length - 1];
+      if (!last || Math.hypot(point.x - last.x, point.y - last.y) > 0.01) {
+        clean.push(point);
+      }
+    }
+    return clean;
+  };
 
   document.querySelectorAll("[data-diagram]").forEach(init);
 
@@ -69,14 +93,17 @@
       userPaused: REDUCED_MOTION.matches || !autoplay,
       autoPaused: false,
       motionOff: false,
-      multiSelect: false,
     };
 
-    const playButton = figure.querySelector("[data-dg-play]");
-    const playIcon = figure.querySelector("[data-dg-play-icon]");
-    const playLabel = figure.querySelector("[data-dg-play-label]");
-    const motionButton = figure.querySelector("[data-dg-motion]");
-    const multiButton = figure.querySelector("[data-dg-multi]");
+    const animationControl = figure.querySelector(
+      "[data-dg-animation-control]",
+    );
+    const animationButton = figure.querySelector("[data-dg-animation]");
+    const animationIcon = figure.querySelector("[data-dg-animation-icon]");
+    const animationLabel = figure.querySelector("[data-dg-animation-label]");
+    const animationOptions = Array.from(
+      figure.querySelectorAll("[data-dg-anim-action]"),
+    );
     const speedControl = figure.querySelector("[data-dg-speed-control]");
     const speedButton = figure.querySelector("[data-dg-speed]");
     const speedRange = figure.querySelector("[data-dg-speed-range]");
@@ -87,9 +114,8 @@
       "[data-dg-direction-control]",
     );
     const directionButton = figure.querySelector("[data-dg-direction]");
-    const directionRange = figure.querySelector("[data-dg-direction-range]");
-    const directionTicks = Array.from(
-      figure.querySelectorAll("[data-dg-direction-tick]"),
+    const directionOptions = Array.from(
+      figure.querySelectorAll("[data-dg-direction-option]"),
     );
     const zoomInButton = figure.querySelector("[data-dg-zoom-in]");
     const zoomOutButton = figure.querySelector("[data-dg-zoom-out]");
@@ -147,6 +173,11 @@
         label: null,
       }),
     );
+    for (const edge of edges) {
+      edge.startSide = pathSide(edge.points, true);
+      edge.endSide = pathSide(edge.points, false);
+    }
+
     svg.querySelectorAll(".dg-edge-label").forEach((label) => {
       const index = number(label.dataset.dgEdge, -1);
       if (edges[index]) edges[index].label = label;
@@ -338,7 +369,7 @@
     function updateHintText() {
       if (!hint) return;
       hint.textContent = MOBILE.matches
-        ? "Drag to pan · Pinch to zoom · Tap Multi to select nodes · Drag a group"
+        ? "Drag to pan · Pinch to zoom · Drag a group to move it"
         : "Left-drag to select · Shift adds · Right-drag to pan · Drag a group";
     }
 
@@ -483,6 +514,133 @@
       return { d, label };
     }
 
+    function sideDirectionOk(points, side, atStart) {
+      if (!side || points.length < 2) return true;
+      const a = atStart ? points[0] : points[points.length - 2];
+      const b = atStart ? points[1] : points[points.length - 1];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      switch (side) {
+        case "right":
+          return atStart ? dx > 0.01 : dx < -0.01;
+        case "left":
+          return atStart ? dx < -0.01 : dx > 0.01;
+        case "bottom":
+          return atStart ? dy > 0.01 : dy < -0.01;
+        case "top":
+          return atStart ? dy < -0.01 : dy > 0.01;
+        default:
+          return true;
+      }
+    }
+
+    function segmentHitsRect(a, b, rect, margin = 3) {
+      const minX = Math.min(a.x, b.x);
+      const maxX = Math.max(a.x, b.x);
+      const minY = Math.min(a.y, b.y);
+      const maxY = Math.max(a.y, b.y);
+      return (
+        maxX >= rect.x - margin &&
+        minX <= rect.x + rect.w + margin &&
+        maxY >= rect.y - margin &&
+        minY <= rect.y + rect.h + margin
+      );
+    }
+
+    function liveElbowRoute(edge, fromNode, toNode) {
+      const first = edge.points[0];
+      const last = edge.points[edge.points.length - 1];
+      if (!first || !last) return null;
+
+      const start = { x: first.x + fromNode.tx, y: first.y + fromNode.ty };
+      const end = { x: last.x + toNode.tx, y: last.y + toNode.ty };
+      const origin = edge.points[Math.floor(edge.points.length / 2)] || first;
+      const avgDx = (fromNode.tx + toNode.tx) / 2;
+      const avgDy = (fromNode.ty + toNode.ty) / 2;
+      const midX = (start.x + end.x) / 2;
+      const midY = (start.y + end.y) / 2;
+
+      const xs = new Set([midX, origin.x + avgDx]);
+      const ys = new Set([midY, origin.y + avgDy]);
+      for (const offset of [-90, -45, 45, 90]) {
+        xs.add(midX + offset);
+        ys.add(midY + offset);
+      }
+
+      const obstacles = nodes
+        .filter((node) => node !== fromNode && node !== toNode)
+        .map((node) => currentRect(node));
+      for (const rect of obstacles) {
+        xs.add(rect.x - 20);
+        xs.add(rect.x + rect.w + 20);
+        ys.add(rect.y - 20);
+        ys.add(rect.y + rect.h + 20);
+      }
+
+      const xLanes = Array.from(xs)
+        .filter((value) => Number.isFinite(value))
+        .slice(0, 14);
+      const yLanes = Array.from(ys)
+        .filter((value) => Number.isFinite(value))
+        .slice(0, 14);
+
+      const candidates = [];
+      const add = (points) => {
+        const clean = simplifyPoints(points);
+        if (clean.length >= 2) candidates.push(clean);
+      };
+
+      add([start, { x: end.x, y: start.y }, end]);
+      add([start, { x: start.x, y: end.y }, end]);
+      for (const x of xLanes) {
+        add([start, { x, y: start.y }, { x, y: end.y }, end]);
+      }
+      for (const y of yLanes) {
+        add([start, { x: start.x, y }, { x: end.x, y }, end]);
+      }
+      for (const x of xLanes) {
+        for (const y of yLanes) {
+          add([start, { x, y: start.y }, { x, y }, { x: end.x, y }, end]);
+          add([start, { x: start.x, y }, { x, y }, { x, y: end.y }, end]);
+        }
+      }
+
+      let best = null;
+      let bestScore = Infinity;
+      for (const points of candidates) {
+        let score = (points.length - 2) * 8;
+        if (!sideDirectionOk(points, edge.startSide, true)) score += 1e5;
+        if (!sideDirectionOk(points, edge.endSide, false)) score += 1e5;
+
+        for (let index = 1; index < points.length; index += 1) {
+          const a = points[index - 1];
+          const b = points[index];
+          score += Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+          for (const rect of obstacles) {
+            if (segmentHitsRect(a, b, rect)) score += 1e6;
+          }
+          for (const point of [a, b]) {
+            if (
+              point.x < base.x - 40 ||
+              point.x > base.x + base.w + 40 ||
+              point.y < base.y - 40 ||
+              point.y > base.y + base.h + 40
+            ) {
+              score += 5e4;
+            }
+          }
+        }
+
+        if (score < bestScore) {
+          bestScore = score;
+          best = points;
+        }
+      }
+
+      if (!best) return null;
+      return { d: pointsToPath(best) };
+    }
+
     function shiftStart(points, dx, dy) {
       const old = points[0];
       const next = { x: old.x + dx, y: old.y + dy };
@@ -534,6 +692,19 @@
             y: point.y + fromNode.ty,
           }));
           edge.path.setAttribute("d", pointsToPath(points));
+        } else if (fromMoved && toMoved && edge.route === "elbow") {
+          const live = liveElbowRoute(edge, fromNode, toNode);
+          if (live) {
+            edge.path.setAttribute("d", live.d);
+          } else {
+            const geometry = routeGeometry(
+              currentRect(fromNode),
+              currentRect(toNode),
+              edge.route,
+            );
+            edge.path.setAttribute("d", geometry.d);
+            label = geometry.label;
+          }
         } else if (
           (fromMoved && toMoved) ||
           edge.route !== "elbow" ||
@@ -827,22 +998,41 @@
       }
     }
 
-    function updatePlayButton() {
-      if (!playButton) return;
-      playButton.disabled = state.motionOff;
+    function updateAnimationButton() {
+      if (!animationButton) return;
+      let status;
+      let statusName;
+      let icon;
+      let label;
       if (state.motionOff) {
-        if (playIcon) playIcon.textContent = "■";
-        if (playLabel) playLabel.textContent = "Off";
-        playButton.setAttribute("aria-label", "Animation is disabled");
-        playButton.setAttribute("title", "Animation is disabled");
-        return;
+        status = "disable";
+        statusName = "disabled";
+        icon = "■";
+        label = "Off";
+      } else if (state.userPaused) {
+        status = "pause";
+        statusName = "paused";
+        icon = "▶";
+        label = "Play";
+      } else {
+        status = "play";
+        statusName = "playing";
+        icon = "❚❚";
+        label = "Pause";
       }
-      const paused = state.userPaused;
-      if (playIcon) playIcon.textContent = paused ? "▶" : "❚❚";
-      if (playLabel) playLabel.textContent = paused ? "Play" : "Pause";
-      const label = paused ? "Play animation" : "Pause animation";
-      playButton.setAttribute("aria-label", label);
-      playButton.setAttribute("title", label);
+      if (animationIcon) animationIcon.textContent = icon;
+      if (animationLabel) animationLabel.textContent = label;
+      animationButton.setAttribute(
+        "aria-label",
+        `Animation ${statusName}. Open animation options.`,
+      );
+      animationButton.setAttribute("title", "Animation options");
+      animationOptions.forEach((option) => {
+        const action = option.dataset.dgAnimAction;
+        const active = action === status;
+        option.classList.toggle("is-active", active);
+        option.setAttribute("aria-pressed", String(active));
+      });
     }
 
     function updateSpeedLabel() {
@@ -865,10 +1055,12 @@
         "aria-label",
         `Flow direction: ${DIRECTION_NAMES[state.direction]}`,
       );
-      const index = DIRECTIONS.indexOf(state.direction);
-      if (directionRange) directionRange.value = String(index);
-      directionTicks.forEach((tick, tickIndex) => {
-        tick.classList.toggle("is-active", tickIndex === index);
+      directionButton.setAttribute("title", "Animation direction");
+      directionOptions.forEach((option) => {
+        const active =
+          option.dataset.dgDirectionOption === state.direction;
+        option.classList.toggle("is-active", active);
+        option.setAttribute("aria-pressed", String(active));
       });
     }
 
@@ -876,20 +1068,6 @@
       if (edge.classList.contains("dg-edge--draw")) return drawMs;
       if (edge.classList.contains("dg-edge--pulse")) return pulseMs;
       return 0;
-    }
-
-    function updateMotionButton() {
-      if (!motionButton) return;
-      motionButton.textContent = state.motionOff ? "Enable" : "Disable";
-      motionButton.setAttribute(
-        "aria-label",
-        state.motionOff ? "Enable animation" : "Disable animation",
-      );
-      motionButton.setAttribute(
-        "title",
-        state.motionOff ? "Enable animation" : "Disable animation",
-      );
-      motionButton.setAttribute("aria-pressed", String(state.motionOff));
     }
 
     function updateAnimations() {
@@ -928,18 +1106,29 @@
         edge.style.animationPlayState = running ? "running" : "paused";
       });
       syncPackets();
-      updatePlayButton();
-      updateMotionButton();
+      updateAnimationButton();
     }
 
     function togglePlay() {
-      if (state.motionOff) return;
-      state.userPaused = !state.userPaused;
+      if (state.motionOff) {
+        state.motionOff = false;
+        state.userPaused = false;
+      } else {
+        state.userPaused = !state.userPaused;
+      }
       updateAnimations();
     }
 
-    function toggleMotion() {
-      state.motionOff = !state.motionOff;
+    function setAnimation(action) {
+      if (action === "play") {
+        state.motionOff = false;
+        state.userPaused = false;
+      } else if (action === "pause") {
+        state.motionOff = false;
+        state.userPaused = true;
+      } else if (action === "disable") {
+        state.motionOff = true;
+      }
       updateAnimations();
     }
 
@@ -1364,23 +1553,9 @@
       return nodes.filter((node) => selectedNodes.has(node.id));
     }
 
-    function updateMultiButton() {
-      if (!multiButton) return;
-      multiButton.setAttribute("aria-pressed", String(state.multiSelect));
-      multiButton.setAttribute(
-        "title",
-        state.multiSelect
-          ? "Multi-select is on; tap nodes to add or remove"
-          : "Toggle multi-select; tap nodes to add or remove",
-      );
-    }
-
     function startMarquee(event) {
       const additive =
-        event.shiftKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        state.multiSelect;
+        event.shiftKey || event.ctrlKey || event.metaKey;
       if (!additive) {
         selectedNodes.clear();
         updateSelectionStyles();
@@ -1486,11 +1661,7 @@
       const node = nodeById.get(element.dataset.node);
       if (!node) return false;
 
-      const toggle =
-        event.shiftKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        state.multiSelect;
+      const toggle = event.shiftKey || event.ctrlKey || event.metaKey;
       const wasSelected = selectedNodes.has(node.id);
 
       if (toggle) {
@@ -1534,11 +1705,7 @@
       const members = nodes.filter((node) => node.group === group.id);
       if (!members.length) return false;
 
-      const add =
-        event.shiftKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        state.multiSelect;
+      const add = event.shiftKey || event.ctrlKey || event.metaKey;
       if (!add) selectedNodes.clear();
       for (const member of members) selectedNodes.add(member.id);
       updateSelectionStyles();
@@ -1565,11 +1732,23 @@
     }
 
     // Animation controls
-    playButton?.addEventListener("click", togglePlay);
-    motionButton?.addEventListener("click", toggleMotion);
-    multiButton?.addEventListener("click", () => {
-      state.multiSelect = !state.multiSelect;
-      updateMultiButton();
+    animationButton?.addEventListener("click", () => {
+      speedControl?.classList.remove("is-open");
+      directionControl?.classList.remove("is-open");
+      animationControl?.classList.add("is-open");
+      window.requestAnimationFrame(() => animationOptions[0]?.focus());
+    });
+
+    animationOptions.forEach((option) => {
+      option.addEventListener("click", (event) => {
+        setAnimation(option.dataset.dgAnimAction);
+        animationControl?.classList.remove("is-open");
+        if (event.detail > 0) {
+          option.blur();
+        } else {
+          animationButton?.focus();
+        }
+      });
     });
 
     speedButton?.addEventListener("click", () => {
@@ -1592,30 +1771,43 @@
 
     directionButton?.addEventListener("click", () => {
       speedControl?.classList.remove("is-open");
+      animationControl?.classList.remove("is-open");
       directionControl?.classList.add("is-open");
-      window.requestAnimationFrame(() => directionRange?.focus());
+      window.requestAnimationFrame(() => directionOptions[0]?.focus());
     });
 
-    directionRange?.addEventListener("input", () => {
-      const index = clamp(
-        number(directionRange.value, DIRECTIONS.indexOf(state.direction)),
-        0,
-        DIRECTIONS.length - 1,
-      );
-      state.direction = DIRECTIONS[index];
-      updateDirectionLabel();
-      updateAnimations();
-      positionPackets();
+    directionOptions.forEach((option) => {
+      option.addEventListener("click", (event) => {
+        state.direction = option.dataset.dgDirectionOption;
+        updateDirectionLabel();
+        updateAnimations();
+        positionPackets();
+        directionControl?.classList.remove("is-open");
+        if (event.detail > 0) {
+          option.blur();
+        } else {
+          directionButton?.focus();
+        }
+      });
     });
 
     speedControl?.addEventListener("mouseenter", () => {
+      animationControl?.classList.remove("is-open");
       directionControl?.classList.remove("is-open");
     });
     directionControl?.addEventListener("mouseenter", () => {
+      animationControl?.classList.remove("is-open");
       speedControl?.classList.remove("is-open");
+    });
+    animationControl?.addEventListener("mouseenter", () => {
+      speedControl?.classList.remove("is-open");
+      directionControl?.classList.remove("is-open");
     });
 
     document.addEventListener("pointerdown", (event) => {
+      if (animationControl && !animationControl.contains(event.target)) {
+        animationControl.classList.remove("is-open");
+      }
       if (speedControl && !speedControl.contains(event.target)) {
         speedControl.classList.remove("is-open");
       }
@@ -1912,7 +2104,6 @@
 
     updateSpeedLabel();
     updateDirectionLabel();
-    updateMultiButton();
     updateHintText();
     MOBILE.addEventListener("change", updateHintText);
 
