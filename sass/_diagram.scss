@@ -395,6 +395,22 @@
   cursor: grabbing;
 }
 
+.diagram__canvas.is-selecting {
+  cursor: crosshair;
+}
+
+.diagram__marquee {
+  position: absolute;
+  z-index: 5;
+  border: 1px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  pointer-events: none;
+}
+
+.diagram__marquee[hidden] {
+  display: none;
+}
+
 .diagram__canvas svg {
   display: block;
   width: 100%;

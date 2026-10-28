@@ -166,12 +166,15 @@ Diagrams are rendered inside a fixed-height SVG canvas with a toolbar:
 - **Direction**: hover or focus the arrow for a slider with forward, reverse,
   and alternating (the default) stops.
 - **Zoom**: mouse wheel over the canvas, buttons, `+`/`-`, or pinch.
-- **Pan**: right-drag, drag empty canvas space outside groups, or arrow keys when
-  focused.
-- **Move nodes**: drag any node. Shift-click (or turn on **Multi** and tap) to
-  select several nodes, then drag any selected node to move the whole set. Only
-  selected nodes and their incident edges move; other routes stay untouched,
-  and incident elbows are translated rather than rerouted through the diagram.
+- **Pan**: right-drag on desktop, drag empty canvas space on touch, or use the
+  arrow keys when the canvas is focused.
+- **Select**: left-drag an empty area to draw a selection box around nodes.
+  Hold Shift (or turn on **Multi**) to add to the current selection; a plain
+  click on empty canvas clears it.
+- **Move nodes**: drag any node. Select several nodes by box or Shift-click,
+  then drag any selected node to move the whole set. Only selected nodes and
+  their incident edges move; other routes stay untouched, and incident elbows
+  are translated rather than rerouted through the diagram.
 - **Move groups**: drag a group box or label; every node inside the group moves
   with it and keeps its relative position.
 - **Fit**: show the whole diagram.

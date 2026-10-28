@@ -42,6 +42,7 @@
 
     const svg = figure.querySelector("svg");
     const canvas = figure.querySelector("[data-dg-canvas]");
+    const marqueeElement = figure.querySelector("[data-dg-marquee]");
     const toolbar = figure.querySelector("[data-dg-toolbar]");
     if (!svg || !canvas || !toolbar) return;
 
@@ -233,6 +234,7 @@
     const selectedNodes = new Set();
     let drag = null;
     let nodeDrag = null;
+    let marquee = null;
     let pinch = null;
     let hintHidden = false;
     let onScreen = true;
@@ -337,7 +339,7 @@
       if (!hint) return;
       hint.textContent = MOBILE.matches
         ? "Drag to pan · Pinch to zoom · Tap Multi to select nodes · Drag a group"
-        : "Right-drag to pan · Shift-click to multi-select · Drag a group to move it";
+        : "Left-drag to select · Shift adds · Right-drag to pan · Drag a group";
     }
 
     function zoomBy(factor, clientX, clientY) {
@@ -945,6 +947,7 @@
       nodeDrag = null;
       drag = null;
       pinch = null;
+      cancelMarquee();
       pointers.clear();
       selectedNodes.clear();
       updateSelectionStyles();
@@ -1372,6 +1375,102 @@
       );
     }
 
+    function startMarquee(event) {
+      const additive =
+        event.shiftKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        state.multiSelect;
+      if (!additive) {
+        selectedNodes.clear();
+        updateSelectionStyles();
+      }
+      marquee = {
+        id: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        additive,
+        moved: false,
+      };
+      canvas.classList.add("is-selecting");
+    }
+
+    function updateMarquee(event) {
+      if (!marquee || !marqueeElement) return;
+      const rect = canvas.getBoundingClientRect();
+      const left = clamp(
+        Math.min(marquee.startX, event.clientX),
+        rect.left,
+        rect.right,
+      );
+      const right = clamp(
+        Math.max(marquee.startX, event.clientX),
+        rect.left,
+        rect.right,
+      );
+      const top = clamp(
+        Math.min(marquee.startY, event.clientY),
+        rect.top,
+        rect.bottom,
+      );
+      const bottom = clamp(
+        Math.max(marquee.startY, event.clientY),
+        rect.top,
+        rect.bottom,
+      );
+      marqueeElement.hidden = false;
+      marqueeElement.style.left = `${left - rect.left}px`;
+      marqueeElement.style.top = `${top - rect.top}px`;
+      marqueeElement.style.width = `${Math.max(1, right - left)}px`;
+      marqueeElement.style.height = `${Math.max(1, bottom - top)}px`;
+    }
+
+    function hideMarquee() {
+      if (marqueeElement) marqueeElement.hidden = true;
+      canvas.classList.remove("is-selecting");
+    }
+
+    function finishMarquee(event) {
+      if (!marquee) return;
+      hideHint();
+      const additive = marquee.additive;
+      const moved = marquee.moved;
+      const startX = marquee.startX;
+      const startY = marquee.startY;
+
+      if (moved) {
+        const rect = canvas.getBoundingClientRect();
+        const left = clamp(Math.min(startX, event.clientX), rect.left, rect.right);
+        const right = clamp(Math.max(startX, event.clientX), rect.left, rect.right);
+        const top = clamp(Math.min(startY, event.clientY), rect.top, rect.bottom);
+        const bottom = clamp(Math.max(startY, event.clientY), rect.top, rect.bottom);
+
+        if (!additive) selectedNodes.clear();
+        for (const node of nodes) {
+          const bounds = node.element.getBoundingClientRect();
+          if (
+            bounds.right >= left &&
+            bounds.left <= right &&
+            bounds.bottom >= top &&
+            bounds.top <= bottom
+          ) {
+            selectedNodes.add(node.id);
+          }
+        }
+        updateSelectionStyles();
+      } else if (!additive) {
+        selectedNodes.clear();
+        updateSelectionStyles();
+      }
+      hideMarquee();
+      marquee = null;
+    }
+
+    function cancelMarquee() {
+      hideMarquee();
+      marquee = null;
+    }
+
     function startPan(event) {
       drag = {
         id: event.pointerId,
@@ -1555,18 +1654,15 @@
           return;
         }
 
-        if (
-          left &&
-          !event.shiftKey &&
-          !event.ctrlKey &&
-          !event.metaKey &&
-          !state.multiSelect
-        ) {
-          selectedNodes.clear();
-          updateSelectionStyles();
+        // Mouse left-drag on empty canvas draws a selection box. Touch and
+        // pen still pan with one finger, and right-drag always pans.
+        if (isMouse && event.button === 0) {
+          startMarquee(event);
+        } else {
+          startPan(event);
         }
-        startPan(event);
       } else {
+        cancelMarquee();
         if (nodeDrag) {
           for (const item of nodeDrag.nodes) {
             item.node.element.classList.remove("is-moving");
@@ -1582,6 +1678,21 @@
     canvas.addEventListener("pointermove", (event) => {
       if (!pointers.has(event.pointerId)) return;
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (marquee && marquee.id === event.pointerId) {
+        const dx = event.clientX - marquee.startX;
+        const dy = event.clientY - marquee.startY;
+        if (!marquee.moved) {
+          if (Math.hypot(dx, dy) < 3) {
+            event.preventDefault();
+            return;
+          }
+          marquee.moved = true;
+        }
+        updateMarquee(event);
+        event.preventDefault();
+        return;
+      }
 
       if (nodeDrag && nodeDrag.id === event.pointerId) {
         const screenDx = event.clientX - nodeDrag.startX;
@@ -1650,6 +1761,13 @@
     });
 
     const endPointer = (event) => {
+      if (marquee && marquee.id === event.pointerId) {
+        if (event.type === "pointerup") {
+          finishMarquee(event);
+        } else {
+          cancelMarquee();
+        }
+      }
       if (nodeDrag && nodeDrag.id === event.pointerId) {
         if (!nodeDrag.moved) {
           if (nodeDrag.toggle) {

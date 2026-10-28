@@ -40,7 +40,7 @@
       <button class="diagram__button diagram__button--value" type="button" data-dg-png aria-label="Copy diagram as PNG" title="Copy diagram as PNG">PNG</button>
     </div>
   </div>
-  <div class="diagram__canvas" data-dg-canvas tabindex="0" role="group" aria-label="Diagram; right-drag or drag empty space to pan, scroll to zoom, drag a node to move it, pinch to zoom">{{ svg | safe }}</div>
+  <div class="diagram__canvas" data-dg-canvas tabindex="0" role="group" aria-label="Diagram; left-drag to select, right-drag to pan, scroll to zoom, drag a node to move it, pinch to zoom">{{ svg | safe }}<div class="diagram__marquee" data-dg-marquee hidden></div></div>
   <p class="diagram__hint" data-dg-hint hidden>Right-drag to pan · Scroll to zoom · Drag a node to move</p>
   {% if caption %}<figcaption>{{ caption }}</figcaption>{% endif %}
   <p class="diagram__source">Source: <a href="https://github.com/AjiArya/website/blob/main/diagrams/{{ name }}.yaml" target="_blank" rel="noopener">diagrams/{{ name }}.yaml</a></p>
