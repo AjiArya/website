@@ -24,6 +24,7 @@ pub const ICON_NAMES: &[&str] = &[
     "queue",
     "server",
     "storage",
+    "switch",
     "user",
     "vm",
 ];
@@ -88,6 +89,9 @@ pub fn markup(name: &str) -> Option<&'static str> {
         }
         "storage" => {
             r#"<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 14h16M8 7h.01M8 12h.01M8 17h.01"/>"#
+        }
+        "switch" => {
+            r#"<rect x="3" y="8" width="18" height="9" rx="2"/><path d="M7 12.5h.01M10 12.5h.01M13 12.5h.01M16 12.5h.01M8 8V5h8v3"/>"#
         }
         "user" => r#"<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-4 3-6 7-6s7 2 7 6"/>"#,
         "vm" => {

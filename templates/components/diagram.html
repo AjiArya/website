@@ -2,7 +2,7 @@
 {%- set svg = load_data(path="generated/diagrams/" ~ name ~ ".svg", required=true) -%}
 <figure class="diagram" data-diagram data-diagram-name="{{ name }}" data-dg-source="@ajiarya">
   <div class="diagram__toolbar" data-dg-toolbar role="toolbar" aria-label="Diagram controls" hidden>
-    <div class="diagram__controls" role="group" aria-label="Animation">
+    <div class="diagram__controls" role="group" aria-label="Animation" data-dg-animation-group>
       <button class="diagram__button" type="button" data-dg-anim-action="play" aria-label="Start animation" title="Start animation" aria-pressed="false"><span class="diagram__icon" aria-hidden="true">▶</span><span class="diagram__button-label">Start</span></button>
       <button class="diagram__button" type="button" data-dg-anim-action="pause" aria-label="Pause animation" title="Pause animation" aria-pressed="false"><span class="diagram__icon" aria-hidden="true">❚❚</span><span class="diagram__button-label">Pause</span></button>
       <button class="diagram__button" type="button" data-dg-anim-action="disable" aria-label="Disable animation" title="Disable animation" aria-pressed="false"><span class="diagram__icon" aria-hidden="true">■</span><span class="diagram__button-label">Disable</span></button>

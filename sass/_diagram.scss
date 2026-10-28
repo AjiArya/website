@@ -92,6 +92,17 @@
   stroke-width: 1.4;
   stroke-linecap: round;
   stroke-linejoin: round;
+  transition: opacity 120ms ease, stroke-width 120ms ease;
+}
+
+.dg-svg.is-highlighting .dg-edge {
+  opacity: 0.12;
+}
+
+.dg-svg.is-highlighting .dg-edge.is-highlighted {
+  opacity: 1;
+  stroke-width: 2.2;
+  filter: drop-shadow(0 0 4px var(--dg-tone));
 }
 
 .dg-edge--draw {
@@ -130,6 +141,61 @@
 
 .dg-node.is-selected .dg-node-accent {
   fill: var(--accent);
+}
+
+.dg-node--vm .dg-node-box {
+  stroke-dasharray: 4 3;
+}
+
+.arch-node-title {
+  fill: var(--dg-text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.arch-node-meta {
+  fill: var(--dg-muted);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.04em;
+}
+
+.arch-nic {
+  fill: color-mix(in srgb, var(--dg-tone) 6%, transparent);
+  stroke: color-mix(in srgb, var(--dg-tone) 35%, var(--rule));
+  stroke-width: 0.8;
+}
+
+.arch-nic-label {
+  fill: color-mix(in srgb, var(--dg-tone) 78%, var(--dg-muted));
+  font-family: var(--font-mono);
+  font-size: 6.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+
+.arch-port {
+  fill: var(--bg);
+  stroke: var(--rule-strong);
+  stroke-width: 0.7;
+}
+
+.arch-port.is-used {
+  fill: var(--dg-tone);
+  stroke: var(--dg-tone);
+}
+
+.arch-port-label {
+  fill: var(--dg-muted);
+  font-family: var(--font-mono);
+  font-size: 4.8px;
+  pointer-events: none;
+}
+
+.arch-port-label.is-used {
+  fill: var(--bg);
+  font-weight: 700;
 }
 
 .dg-packet {
@@ -240,6 +306,10 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
+}
+
+.diagram__controls[hidden] {
+  display: none;
 }
 
 .diagram__button {

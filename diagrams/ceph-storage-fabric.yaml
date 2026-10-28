@@ -1,0 +1,241 @@
+version: 1
+style: architecture
+title: Ceph storage fabric
+description: Three Ceph monitor hosts and three Ceph OSD hosts dual-homed to two leaf switches, with a bond across both NICs.
+direction: TB
+padding: 40
+
+nodes:
+  - id: leaf1
+    kind: switch
+    label: leaf-01
+    icon: switch
+    tone: cyan
+    ports: 48
+    port_columns: 24
+    rank: 0
+  - id: leaf2
+    kind: switch
+    label: leaf-02
+    icon: switch
+    tone: cyan
+    ports: 48
+    port_columns: 24
+    rank: 0
+
+  - id: mon1
+    kind: server
+    label: ceph-mon-01
+    icon: ceph
+    tone: violet
+    rank: 1
+    nics:
+      - id: nic1
+        ports: 2
+        tone: blue
+      - id: nic2
+        ports: 2
+        tone: amber
+  - id: mon2
+    kind: server
+    label: ceph-mon-02
+    icon: ceph
+    tone: violet
+    rank: 1
+    nics:
+      - id: nic1
+        ports: 2
+        tone: blue
+      - id: nic2
+        ports: 2
+        tone: amber
+  - id: mon3
+    kind: server
+    label: ceph-mon-03
+    icon: ceph
+    tone: violet
+    rank: 1
+    nics:
+      - id: nic1
+        ports: 2
+        tone: blue
+      - id: nic2
+        ports: 2
+        tone: amber
+
+  - id: osd1
+    kind: server
+    label: ceph-osd-01
+    icon: ceph
+    tone: amber
+    rank: 1
+    nics:
+      - id: nic1
+        ports: 2
+        tone: blue
+      - id: nic2
+        ports: 2
+        tone: amber
+  - id: osd2
+    kind: server
+    label: ceph-osd-02
+    icon: ceph
+    tone: amber
+    rank: 1
+    nics:
+      - id: nic1
+        ports: 2
+        tone: blue
+      - id: nic2
+        ports: 2
+        tone: amber
+  - id: osd3
+    kind: server
+    label: ceph-osd-03
+    icon: ceph
+    tone: amber
+    rank: 1
+    nics:
+      - id: nic1
+        ports: 2
+        tone: blue
+      - id: nic2
+        ports: 2
+        tone: amber
+
+edges:
+  - from: mon1
+    from_nic: nic1
+    from_port: 1
+    to: leaf1
+    to_port: 1
+  - from: mon1
+    from_nic: nic2
+    from_port: 1
+    to: leaf1
+    to_port: 2
+  - from: mon1
+    from_nic: nic1
+    from_port: 2
+    to: leaf2
+    to_port: 1
+  - from: mon1
+    from_nic: nic2
+    from_port: 2
+    to: leaf2
+    to_port: 2
+
+  - from: mon2
+    from_nic: nic1
+    from_port: 1
+    to: leaf1
+    to_port: 3
+  - from: mon2
+    from_nic: nic2
+    from_port: 1
+    to: leaf1
+    to_port: 4
+  - from: mon2
+    from_nic: nic1
+    from_port: 2
+    to: leaf2
+    to_port: 3
+  - from: mon2
+    from_nic: nic2
+    from_port: 2
+    to: leaf2
+    to_port: 4
+
+  - from: mon3
+    from_nic: nic1
+    from_port: 1
+    to: leaf1
+    to_port: 5
+  - from: mon3
+    from_nic: nic2
+    from_port: 1
+    to: leaf1
+    to_port: 6
+  - from: mon3
+    from_nic: nic1
+    from_port: 2
+    to: leaf2
+    to_port: 5
+  - from: mon3
+    from_nic: nic2
+    from_port: 2
+    to: leaf2
+    to_port: 6
+
+  - from: osd1
+    from_nic: nic1
+    from_port: 1
+    to: leaf1
+    to_port: 7
+  - from: osd1
+    from_nic: nic2
+    from_port: 1
+    to: leaf1
+    to_port: 8
+  - from: osd1
+    from_nic: nic1
+    from_port: 2
+    to: leaf2
+    to_port: 7
+  - from: osd1
+    from_nic: nic2
+    from_port: 2
+    to: leaf2
+    to_port: 8
+
+  - from: osd2
+    from_nic: nic1
+    from_port: 1
+    to: leaf1
+    to_port: 9
+  - from: osd2
+    from_nic: nic2
+    from_port: 1
+    to: leaf1
+    to_port: 10
+  - from: osd2
+    from_nic: nic1
+    from_port: 2
+    to: leaf2
+    to_port: 9
+  - from: osd2
+    from_nic: nic2
+    from_port: 2
+    to: leaf2
+    to_port: 10
+
+  - from: osd3
+    from_nic: nic1
+    from_port: 1
+    to: leaf1
+    to_port: 11
+  - from: osd3
+    from_nic: nic2
+    from_port: 1
+    to: leaf1
+    to_port: 12
+  - from: osd3
+    from_nic: nic1
+    from_port: 2
+    to: leaf2
+    to_port: 11
+  - from: osd3
+    from_nic: nic2
+    from_port: 2
+    to: leaf2
+    to_port: 12
+
+animation:
+  preset: subtle
+  draw: false
+  flow: false
+  draw_ms: 1200
+  flow_ms: 2600
+  stagger_ms: 0
+  direction: alternate
+  autoplay: false

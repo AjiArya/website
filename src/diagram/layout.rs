@@ -4,10 +4,12 @@ use anyhow::Result;
 use unicode_width::UnicodeWidthStr;
 
 use crate::diagram::model::{
-    AnimationDirection, Arrow, Diagram, Direction, EdgeAnimation, EdgeStyle, LayoutMode,
-    LbAlgorithm, Route, Shape,
+    AnimationDirection, Arrow, Diagram, DiagramStyle, Direction, EdgeAnimation, EdgeStyle,
+    LayoutMode, LbAlgorithm, NodeKind, Route, Shape,
 };
 use crate::diagram::router;
+
+type ArchitectureGroup = ((String, String), Vec<usize>);
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Rect {
@@ -65,6 +67,30 @@ pub struct LayoutNode {
     pub group: Option<String>,
     pub load_balancer: bool,
     pub lb_algorithm: LbAlgorithm,
+    pub arch: Option<LayoutArchitecture>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LayoutNic {
+    pub id: String,
+    pub tone: String,
+    pub rect: Rect,
+}
+
+#[derive(Debug, Clone)]
+pub struct LayoutPort {
+    pub key: String,
+    pub index: usize,
+    pub rect: Rect,
+    pub used: bool,
+    pub tone: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct LayoutArchitecture {
+    pub kind: NodeKind,
+    pub ports: Vec<LayoutPort>,
+    pub nics: Vec<LayoutNic>,
 }
 
 #[derive(Debug, Clone)]
@@ -111,11 +137,17 @@ pub struct DiagramLayout {
 pub fn layout(diagram: &Diagram, prefix: &str) -> Result<DiagramLayout> {
     diagram.validate()?;
 
+    let architecture = diagram.style == DiagramStyle::Architecture;
     let mut nodes: Vec<LayoutNode> = diagram
         .nodes
         .iter()
         .map(|node| {
-            let (lines, w, h) = size_node(node);
+            let (lines, w, h, arch) = if architecture {
+                architecture_geometry(node)
+            } else {
+                let (lines, w, h) = size_node(node);
+                (lines, w, h, None)
+            };
             LayoutNode {
                 id: node.id.clone(),
                 lines,
@@ -131,26 +163,42 @@ pub fn layout(diagram: &Diagram, prefix: &str) -> Result<DiagramLayout> {
                 group: node.group.clone(),
                 load_balancer: node.load_balancer,
                 lb_algorithm: node.lb_algorithm,
+                arch,
             }
         })
         .collect();
 
-    match diagram.layout {
-        LayoutMode::Manual => {
-            for (node, layout_node) in diagram.nodes.iter().zip(nodes.iter_mut()) {
-                let [x, y] = node.at.expect("validated manual layout");
-                layout_node.rect.x = x;
-                layout_node.rect.y = y;
+    if architecture {
+        auto_positions_architecture(diagram, &mut nodes);
+    } else {
+        match diagram.layout {
+            LayoutMode::Manual => {
+                for (node, layout_node) in diagram.nodes.iter().zip(nodes.iter_mut()) {
+                    let [x, y] = node.at.expect("validated manual layout");
+                    layout_node.rect.x = x;
+                    layout_node.rect.y = y;
+                }
             }
+            LayoutMode::Auto => auto_positions(diagram, &mut nodes)?,
         }
-        LayoutMode::Auto => auto_positions(diagram, &mut nodes)?,
     }
 
-    let mut groups = build_groups(diagram, &nodes);
+    let mut groups = if architecture {
+        Vec::new()
+    } else {
+        build_groups(diagram, &nodes)
+    };
     shift_to_origin(&mut nodes, &mut groups, diagram.padding);
+    if architecture {
+        offset_architecture_rects(&mut nodes);
+    }
 
     let (width, height) = canvas_size(&nodes, &groups, diagram.padding);
-    let edges = route_edges(diagram, &nodes, &groups);
+    let edges = if architecture {
+        route_architecture_edges(diagram, &mut nodes)
+    } else {
+        route_edges(diagram, &nodes, &groups)
+    };
 
     Ok(DiagramLayout {
         title: diagram.title.clone(),
@@ -186,6 +234,248 @@ fn size_node(node: &crate::diagram::model::Node) -> (Vec<String>, f64, f64) {
         .height
         .unwrap_or((22.0 + lines.len() as f64 * 18.0).max(52.0));
     (lines, width, height)
+}
+
+fn architecture_geometry(
+    node: &crate::diagram::model::Node,
+) -> (Vec<String>, f64, f64, Option<LayoutArchitecture>) {
+    let lines = wrap_label(&node.label, 26);
+    let text_width = lines
+        .iter()
+        .map(|line| UnicodeWidthStr::width(line.as_str()) as f64 * 7.8)
+        .fold(0.0_f64, f64::max);
+    let icon_width = 24.0;
+
+    match node.kind {
+        NodeKind::Switch => {
+            let pad = 10.0;
+            let header = 34.0;
+            let port_w = 7.5;
+            let port_h = 9.0;
+            let gap = 1.5;
+            let ports = node.ports.unwrap_or(24);
+            let columns = node
+                .port_columns
+                .unwrap_or(24)
+                .clamp(1, 48)
+                .min(ports.max(1));
+            let rows = ports.div_ceil(columns).max(1);
+            let grid_w = columns as f64 * port_w + (columns.saturating_sub(1)) as f64 * gap;
+            let grid_h = rows as f64 * port_h + (rows.saturating_sub(1)) as f64 * gap;
+            let width = (grid_w + pad * 2.0)
+                .max(text_width + icon_width + 86.0)
+                .max(180.0);
+            let height = pad + header + grid_h + pad;
+            let grid_x = (width - grid_w) / 2.0;
+            let grid_y = pad + header;
+            let tone = node.tone.clone().unwrap_or_else(|| "neutral".to_string());
+            let mut port_cells = Vec::with_capacity(ports);
+            for index in 1..=ports {
+                let position = index - 1;
+                let column = position % columns;
+                let from_bottom = position / columns;
+                let row = rows - 1 - from_bottom;
+                port_cells.push(LayoutPort {
+                    key: index.to_string(),
+                    index,
+                    rect: Rect {
+                        x: grid_x + column as f64 * (port_w + gap),
+                        y: grid_y + row as f64 * (port_h + gap),
+                        w: port_w,
+                        h: port_h,
+                    },
+                    used: false,
+                    tone: tone.clone(),
+                });
+            }
+            (
+                lines,
+                width,
+                height,
+                Some(LayoutArchitecture {
+                    kind: NodeKind::Switch,
+                    ports: port_cells,
+                    nics: Vec::new(),
+                }),
+            )
+        }
+        NodeKind::Server | NodeKind::Vm if !node.nics.is_empty() => {
+            let pad = 10.0;
+            let block_gap = 8.0;
+            let port_w = 10.0;
+            let port_h = 12.0;
+            let port_gap = 4.0;
+            let nic_label_h = 11.0;
+            let block_h = port_h + 5.0 + nic_label_h;
+            let block_widths: Vec<f64> = node
+                .nics
+                .iter()
+                .map(|nic| {
+                    (nic.ports as f64 * port_w
+                        + nic.ports.saturating_sub(1) as f64 * port_gap
+                        + 12.0)
+                        .max(46.0)
+                })
+                .collect();
+            let nics_width = block_widths.iter().sum::<f64>()
+                + block_gap * node.nics.len().saturating_sub(1) as f64;
+            let width = (nics_width + pad * 2.0)
+                .max(text_width + icon_width + 30.0)
+                .max(150.0);
+            let header_y = pad + block_h + 8.0;
+            let height = header_y + (lines.len() as f64 * 16.0).max(22.0) + pad;
+            let mut x = (width - nics_width) / 2.0;
+            let mut nics = Vec::with_capacity(node.nics.len());
+            let mut port_cells = Vec::new();
+            for (nic, block_w) in node.nics.iter().zip(block_widths.iter()) {
+                let tone = nic
+                    .tone
+                    .clone()
+                    .or_else(|| node.tone.clone())
+                    .unwrap_or_else(|| "neutral".to_string());
+                nics.push(LayoutNic {
+                    id: nic.id.clone(),
+                    tone: tone.clone(),
+                    rect: Rect {
+                        x,
+                        y: pad,
+                        w: *block_w,
+                        h: block_h,
+                    },
+                });
+                let ports_w =
+                    nic.ports as f64 * port_w + nic.ports.saturating_sub(1) as f64 * port_gap;
+                let port_x = x + (*block_w - ports_w) / 2.0;
+                for index in 1..=nic.ports {
+                    port_cells.push(LayoutPort {
+                        key: format!("{}/{}", nic.id, index),
+                        index,
+                        rect: Rect {
+                            x: port_x + (index - 1) as f64 * (port_w + port_gap),
+                            y: pad + 2.0,
+                            w: port_w,
+                            h: port_h,
+                        },
+                        used: false,
+                        tone: tone.clone(),
+                    });
+                }
+                x += *block_w + block_gap;
+            }
+            (
+                lines,
+                width,
+                height,
+                Some(LayoutArchitecture {
+                    kind: node.kind,
+                    ports: port_cells,
+                    nics,
+                }),
+            )
+        }
+        _ => {
+            let (lines, w, h) = size_node(node);
+            (lines, w, h, None)
+        }
+    }
+}
+
+fn auto_positions_architecture(diagram: &Diagram, nodes: &mut [LayoutNode]) {
+    let max_rank = diagram
+        .nodes
+        .iter()
+        .map(|node| {
+            node.rank.unwrap_or(match node.kind {
+                NodeKind::Switch => 0,
+                _ => 1,
+            })
+        })
+        .max()
+        .unwrap_or(0);
+    let mut ranks: Vec<Vec<usize>> = vec![Vec::new(); max_rank + 1];
+    for (index, node) in diagram.nodes.iter().enumerate() {
+        let rank = node.rank.unwrap_or(match node.kind {
+            NodeKind::Switch => 0,
+            _ => 1,
+        });
+        ranks[rank].push(index);
+    }
+
+    let node_gap = match diagram.direction {
+        Direction::Tb => 48.0,
+        Direction::Lr => 56.0,
+    };
+    let rank_gap = match diagram.direction {
+        Direction::Tb => 220.0,
+        Direction::Lr => 180.0,
+    };
+
+    match diagram.direction {
+        Direction::Tb => {
+            let rank_widths: Vec<f64> = ranks
+                .iter()
+                .map(|rank| {
+                    rank.iter().map(|&index| nodes[index].rect.w).sum::<f64>()
+                        + node_gap * rank.len().saturating_sub(1) as f64
+                })
+                .collect();
+            let max_width = rank_widths.iter().copied().fold(0.0_f64, f64::max);
+            let mut y = 0.0;
+            for (rank_index, rank) in ranks.iter().enumerate() {
+                let rank_height = rank
+                    .iter()
+                    .map(|&index| nodes[index].rect.h)
+                    .fold(0.0_f64, f64::max);
+                let mut x = (max_width - rank_widths[rank_index]) / 2.0;
+                for &index in rank {
+                    nodes[index].rect.x = x;
+                    nodes[index].rect.y = y + (rank_height - nodes[index].rect.h) / 2.0;
+                    x += nodes[index].rect.w + node_gap;
+                }
+                y += rank_height + rank_gap;
+            }
+        }
+        Direction::Lr => {
+            let rank_heights: Vec<f64> = ranks
+                .iter()
+                .map(|rank| {
+                    rank.iter().map(|&index| nodes[index].rect.h).sum::<f64>()
+                        + node_gap * rank.len().saturating_sub(1) as f64
+                })
+                .collect();
+            let max_height = rank_heights.iter().copied().fold(0.0_f64, f64::max);
+            let mut x = 0.0;
+            for (rank_index, rank) in ranks.iter().enumerate() {
+                let rank_width = rank
+                    .iter()
+                    .map(|&index| nodes[index].rect.w)
+                    .fold(0.0_f64, f64::max);
+                let mut y = (max_height - rank_heights[rank_index]) / 2.0;
+                for &index in rank {
+                    nodes[index].rect.x = x + (rank_width - nodes[index].rect.w) / 2.0;
+                    nodes[index].rect.y = y;
+                    y += nodes[index].rect.h + node_gap;
+                }
+                x += rank_width + rank_gap;
+            }
+        }
+    }
+}
+
+fn offset_architecture_rects(nodes: &mut [LayoutNode]) {
+    for node in nodes {
+        let (ox, oy) = (node.rect.x, node.rect.y);
+        if let Some(arch) = &mut node.arch {
+            for nic in &mut arch.nics {
+                nic.rect.x += ox;
+                nic.rect.y += oy;
+            }
+            for port in &mut arch.ports {
+                port.rect.x += ox;
+                port.rect.y += oy;
+            }
+        }
+    }
 }
 
 fn wrap_label(label: &str, max_width: usize) -> Vec<String> {
@@ -722,6 +1012,241 @@ fn route_edges(diagram: &Diagram, nodes: &[LayoutNode], groups: &[LayoutGroup]) 
             direction: edge.direction,
             arrow: edge.arrow,
             delay_ms: index as u32 * diagram.animation.stagger_ms,
+        });
+    }
+
+    result
+}
+
+fn architecture_port_key(
+    node: &LayoutNode,
+    nic: Option<&str>,
+    port: Option<usize>,
+) -> Option<String> {
+    let port = port?;
+    match nic {
+        Some(nic) => Some(format!("{nic}/{port}")),
+        None => {
+            if node
+                .arch
+                .as_ref()
+                .is_some_and(|arch| arch.kind == NodeKind::Switch)
+            {
+                Some(port.to_string())
+            } else {
+                None
+            }
+        }
+    }
+}
+
+fn architecture_port_index(node: &LayoutNode, key: &str) -> Option<usize> {
+    node.arch
+        .as_ref()?
+        .ports
+        .iter()
+        .position(|port| port.key == key)
+}
+
+fn route_architecture_edges(diagram: &Diagram, nodes: &mut [LayoutNode]) -> Vec<LayoutEdge> {
+    let node_index: HashMap<&str, usize> = diagram
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| (node.id.as_str(), index))
+        .collect();
+
+    let mut starts: Vec<Option<Point>> = vec![None; diagram.edges.len()];
+    let mut ends: Vec<Option<Point>> = vec![None; diagram.edges.len()];
+    let mut tones: Vec<String> = Vec::with_capacity(diagram.edges.len());
+
+    for (index, edge) in diagram.edges.iter().enumerate() {
+        let from_index = node_index[edge.from.as_str()];
+        let to_index = node_index[edge.to.as_str()];
+
+        let from_key =
+            architecture_port_key(&nodes[from_index], edge.from_nic.as_deref(), edge.from_port);
+        let to_key = architecture_port_key(&nodes[to_index], edge.to_nic.as_deref(), edge.to_port);
+
+        let from_port_index = from_key
+            .as_deref()
+            .and_then(|key| architecture_port_index(&nodes[from_index], key));
+        let to_port_index = to_key
+            .as_deref()
+            .and_then(|key| architecture_port_index(&nodes[to_index], key));
+
+        let tone = edge
+            .tone
+            .clone()
+            .or_else(|| {
+                edge.from_nic.as_ref().and_then(|nic_id| {
+                    nodes[from_index]
+                        .arch
+                        .as_ref()?
+                        .nics
+                        .iter()
+                        .find(|nic| &nic.id == nic_id)
+                        .map(|nic| nic.tone.clone())
+                })
+            })
+            .unwrap_or_else(|| nodes[from_index].tone.clone());
+
+        if let Some(port_index) = from_port_index {
+            let center = nodes[from_index].arch.as_ref().unwrap().ports[port_index]
+                .rect
+                .center();
+            starts[index] = Some(center);
+            nodes[from_index].arch.as_mut().unwrap().ports[port_index].used = true;
+        }
+        if let Some(port_index) = to_port_index {
+            let center = nodes[to_index].arch.as_ref().unwrap().ports[port_index]
+                .rect
+                .center();
+            ends[index] = Some(center);
+            let port = &mut nodes[to_index].arch.as_mut().unwrap().ports[port_index];
+            port.used = true;
+            port.tone = tone.clone();
+        }
+        tones.push(tone);
+    }
+
+    let lane_edges: Vec<usize> = (0..diagram.edges.len())
+        .filter(|&index| starts[index].is_some() && ends[index].is_some())
+        .collect();
+
+    let min_y = lane_edges
+        .iter()
+        .map(|&index| starts[index].unwrap().y.min(ends[index].unwrap().y))
+        .fold(f64::INFINITY, f64::min);
+    let max_y = lane_edges
+        .iter()
+        .map(|&index| starts[index].unwrap().y.max(ends[index].unwrap().y))
+        .fold(f64::NEG_INFINITY, f64::max);
+    let lane_top = min_y + 30.0;
+    let lane_bottom = (max_y - 30.0).max(lane_top);
+
+    let mut groups: HashMap<(String, String), Vec<usize>> = HashMap::new();
+    for index in lane_edges {
+        let key = (
+            diagram.edges[index].from.clone(),
+            diagram.edges[index].to.clone(),
+        );
+        groups.entry(key).or_default().push(index);
+    }
+    let mut group_list: Vec<((String, String), Vec<usize>)> = groups.into_iter().collect();
+    for (_, members) in &mut group_list {
+        members.sort_by(|&a, &b| {
+            starts[a]
+                .unwrap()
+                .x
+                .partial_cmp(&starts[b].unwrap().x)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+    }
+    let target_order: HashMap<&str, usize> = diagram
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| (node.id.as_str(), index))
+        .collect();
+    group_list.sort_by(|(a, a_members), (b, b_members)| {
+        let a_target = target_order.get(a.1.as_str()).copied().unwrap_or(0);
+        let b_target = target_order.get(b.1.as_str()).copied().unwrap_or(0);
+        let a_start = a_members
+            .iter()
+            .map(|&i| starts[i].unwrap().x)
+            .fold(f64::INFINITY, f64::min);
+        let b_start = b_members
+            .iter()
+            .map(|&i| starts[i].unwrap().x)
+            .fold(f64::INFINITY, f64::min);
+        a_target.cmp(&b_target).then_with(|| {
+            a_start
+                .partial_cmp(&b_start)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+    });
+
+    let mut lane_y: Vec<f64> = (0..diagram.edges.len())
+        .map(|_| (min_y + max_y) / 2.0)
+        .collect();
+
+    let mut by_target: HashMap<String, Vec<ArchitectureGroup>> = HashMap::new();
+    for group in group_list {
+        by_target.entry(group.0.1.clone()).or_default().push(group);
+    }
+    let mut targets: Vec<String> = by_target.keys().cloned().collect();
+    targets.sort_by_key(|target| target_order.get(target.as_str()).copied().unwrap_or(0));
+    let target_count = targets.len();
+    let band_gap = 16.0;
+    let band_height = if target_count > 0 {
+        ((lane_bottom - lane_top) - band_gap * target_count.saturating_sub(1) as f64)
+            / target_count as f64
+    } else {
+        0.0
+    }
+    .max(1.0);
+
+    for (target_position, target) in targets.iter().enumerate() {
+        let groups = by_target.remove(target).unwrap_or_default();
+        let band_top = lane_top + target_position as f64 * (band_height + band_gap);
+        let group_count = groups.len();
+        for (order, (_, members)) in groups.iter().enumerate() {
+            let center = if group_count <= 1 {
+                band_top + band_height / 2.0
+            } else {
+                band_top + band_height * (order + 1) as f64 / (group_count + 1) as f64
+            };
+            let member_count = members.len();
+            for (position, &index) in members.iter().enumerate() {
+                let offset = (position as f64 - member_count.saturating_sub(1) as f64 / 2.0) * 3.0;
+                lane_y[index] = center + offset;
+            }
+        }
+    }
+
+    let mut result = Vec::with_capacity(diagram.edges.len());
+    for (index, edge) in diagram.edges.iter().enumerate() {
+        let from_index = node_index[edge.from.as_str()];
+        let to_index = node_index[edge.to.as_str()];
+        let start = starts[index].unwrap_or_else(|| nodes[from_index].rect.center());
+        let end = ends[index].unwrap_or_else(|| nodes[to_index].rect.center());
+        let lane = lane_y[index];
+
+        let mut points = vec![start];
+        if (start.x - end.x).abs() > 0.1 {
+            points.push(Point {
+                x: start.x,
+                y: lane,
+            });
+            points.push(Point { x: end.x, y: lane });
+        }
+        points.push(end);
+        let mut path = String::new();
+        for (point_index, point) in points.iter().enumerate() {
+            if point_index == 0 {
+                path.push_str(&format!("M {:.1} {:.1}", point.x, point.y));
+            } else {
+                path.push_str(&format!(" L {:.1} {:.1}", point.x, point.y));
+            }
+        }
+
+        result.push(LayoutEdge {
+            from: edge.from.clone(),
+            to: edge.to.clone(),
+            path,
+            route: Route::Elbow,
+            label: edge.label.clone(),
+            label_pos: Point {
+                x: (start.x + end.x) / 2.0,
+                y: lane,
+            },
+            tone: tones[index].clone(),
+            style: EdgeStyle::Solid,
+            animation: EdgeAnimation::None,
+            direction: None,
+            arrow: Arrow::None,
+            delay_ms: 0,
         });
     }
 

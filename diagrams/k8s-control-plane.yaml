@@ -1,4 +1,5 @@
 version: 1
+style: detailed
 title: Kubernetes control plane on OpenStack
 description: Requests enter through an ingress gateway, reach the Kubernetes API server, and are reconciled onto worker nodes backed by Ceph storage.
 direction: TB

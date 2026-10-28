@@ -1,4 +1,5 @@
 version: 1
+style: detailed
 title: Ceph data path
 description: Object clients authenticate against the monitor quorum, receive a cluster map, and read or write objects directly through RADOS to the OSDs.
 direction: TB

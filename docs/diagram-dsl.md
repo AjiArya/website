@@ -31,6 +31,7 @@ last good SVG in place.
 
 ```yaml
 version: 1
+style: detailed
 title: Request path
 description: A client calls an API.
 direction: LR
@@ -51,18 +52,80 @@ edges:
     label: HTTPS
 ```
 
+## Diagram styles
+
+A diagram declares exactly one style:
+
+- **`detailed`** — the original style, used by the Ceph data-path and Kubernetes
+  diagrams. It supports groups, flow/pulse animation, load-balancer nodes, and
+  node dragging.
+- **`architecture`** — physical and virtual infrastructure with switch/server/VM
+  node kinds, full NIC and switch port grids, and port-to-port links. Architecture
+  diagrams are static by default and use the same pan/zoom/drag/PNG viewer.
+
+### Architecture style
+
+```yaml
+version: 1
+style: architecture
+title: Ceph storage fabric
+direction: TB
+
+nodes:
+  - id: leaf1
+    kind: switch
+    label: leaf-01
+    ports: 48
+    port_columns: 24
+
+  - id: mon1
+    kind: server
+    label: ceph-mon-01
+    nics:
+      - id: nic1
+        ports: 2
+        tone: blue
+      - id: nic2
+        ports: 2
+        tone: amber
+
+edges:
+  - from: mon1
+    from_nic: nic1
+    from_port: 1
+    to: leaf1
+    to_port: 1
+```
+
+Architecture rules:
+
+- `kind`: `switch`, `server`, `vm`, or `generic`.
+- A switch needs `ports` and can set `port_columns`; the full port grid is drawn.
+- A server or VM needs at least one NIC. Each NIC declares its port count and an
+  optional tone.
+- Every architecture edge needs `from_port` and `to_port`. A server/VM endpoint
+  also needs `from_nic` or `to_nic`.
+- Architecture style currently requires `direction: TB`, `layout: auto`, and no
+  groups.
+- Architecture edges are solid, unanimated port-to-port links. Switch ports in
+  use are highlighted and take the tone of the connected NIC.
+- Hovering a node highlights its incident links and dims the rest, which makes a
+  dense fabric traceable without zooming.
+- `groups` and manual layout are not supported in architecture style.
+
 ## Top-level fields
 
 | Field | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `version` | integer | `1` | Must be `1`. |
+| `style` | `detailed` or `architecture` | `detailed` | One style per diagram. |
 | `title` | string | required | Used in the SVG `<title>`. |
 | `description` | string | derived | Used in the SVG `<desc>`. |
 | `direction` | `LR` or `TB` | `LR` | Rank direction for auto layout. |
 | `layout` | `auto` or `manual` | `auto` | Manual mode requires `at` on every node. |
 | `padding` | number | `32` | Canvas padding, 0–200. |
 | `nodes` | list | required | 1–200 nodes. |
-| `groups` | list | `[]` | One level of visual containers. |
+| `groups` | list | `[]` | One level of visual containers; detailed style only. |
 | `edges` | list | `[]` | Up to 500. |
 | `animation` | map | subtle draw | See animation below. |
 
@@ -81,6 +144,13 @@ edges:
   height: 52               # optional
   load_balancer: true      # optional; distribute packets across outgoing edges
   lb_algorithm: round-robin # optional: round-robin | random | least-connections
+  kind: server             # architecture style: switch | server | vm | ...
+  ports: 48                # architecture style switch port count
+  port_columns: 24         # architecture style switch grid columns
+  nics:                    # architecture style server/vm NICs
+    - id: nic1
+      ports: 2
+      tone: blue
 ```
 
 The auto layout computes node sizes from label width, so `width`/`height` are
@@ -125,6 +195,10 @@ edges:
     tone: blue             # optional; defaults to the source node tone
     animation: flow        # inherit | none | draw | flow | pulse
     direction: alternate   # optional: forward | reverse | alternate
+    from_nic: nic1         # architecture style only
+    from_port: 1           # architecture style only
+    to_nic: nic2           # architecture style only, for server targets
+    to_port: 2             # architecture style only
 ```
 
 Edges connect to the nearest side of each node. Elbows use an orthogonal
@@ -168,6 +242,8 @@ Diagrams are rendered inside a fixed-height SVG canvas with a toolbar:
 - **Direction**: hover, focus, or click the arrow for clickable **Forward**,
   **Reverse**, and **Alternating** (default) options.
 - **Zoom**: mouse wheel over the canvas, buttons, `+`/`-`, or pinch.
+  Architecture diagrams start static, so the animation controls are hidden while
+  pan/zoom, selection, dragging, reset, and PNG remain available.
 - **Pan**: right-drag on desktop, drag empty canvas space on touch, or use the
   arrow keys when the canvas is focused.
 - **Select**: left-drag an empty area to draw a selection box around nodes.

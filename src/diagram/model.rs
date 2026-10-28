@@ -25,6 +25,36 @@ pub struct Diagram {
     pub edges: Vec<Edge>,
     #[serde(default)]
     pub animation: Animation,
+    #[serde(default)]
+    pub style: DiagramStyle,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum DiagramStyle {
+    #[default]
+    Detailed,
+    Architecture,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum NodeKind {
+    #[default]
+    Generic,
+    Switch,
+    Server,
+    Vm,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Nic {
+    pub id: String,
+    #[serde(default = "default_nic_ports")]
+    pub ports: usize,
+    #[serde(default)]
+    pub tone: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Default, PartialEq, Eq)]
@@ -76,6 +106,14 @@ pub struct Node {
     pub load_balancer: bool,
     #[serde(default)]
     pub lb_algorithm: LbAlgorithm,
+    #[serde(default)]
+    pub kind: NodeKind,
+    #[serde(default)]
+    pub ports: Option<usize>,
+    #[serde(default)]
+    pub port_columns: Option<usize>,
+    #[serde(default)]
+    pub nics: Vec<Nic>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -186,6 +224,14 @@ pub struct Edge {
     pub animation: EdgeAnimation,
     #[serde(default)]
     pub direction: Option<AnimationDirection>,
+    #[serde(default)]
+    pub from_nic: Option<String>,
+    #[serde(default)]
+    pub from_port: Option<usize>,
+    #[serde(default)]
+    pub to_nic: Option<String>,
+    #[serde(default)]
+    pub to_port: Option<usize>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -296,6 +342,17 @@ impl Diagram {
         if self.animation.stagger_ms > 2_000 {
             errors.push("animation.stagger_ms must be at most 2000".to_string());
         }
+        if self.style == DiagramStyle::Architecture {
+            if self.layout == LayoutMode::Manual {
+                errors.push("architecture diagrams currently require layout: auto".to_string());
+            }
+            if self.direction != Direction::Tb {
+                errors.push("architecture diagrams currently require direction: TB".to_string());
+            }
+            if !self.groups.is_empty() {
+                errors.push("groups are not supported in architecture style".to_string());
+            }
+        }
 
         let mut node_ids = std::collections::HashSet::new();
         for node in &self.nodes {
@@ -331,6 +388,85 @@ impl Diagram {
                     "node {:?} has unknown icon {:?} (see docs/diagram-dsl.md)",
                     node.id, icon
                 ));
+            }
+            if self.style == DiagramStyle::Detailed {
+                if node.kind != NodeKind::Generic
+                    || node.ports.is_some()
+                    || node.port_columns.is_some()
+                    || !node.nics.is_empty()
+                {
+                    errors.push(format!(
+                        "node {:?} uses architecture-only fields but style is detailed",
+                        node.id
+                    ));
+                }
+            } else {
+                match node.kind {
+                    NodeKind::Switch => {
+                        let ports = node.ports.unwrap_or(0);
+                        if !(1..=128).contains(&ports) {
+                            errors.push(format!(
+                                "switch node {:?} needs ports between 1 and 128",
+                                node.id
+                            ));
+                        }
+                        if let Some(columns) = node.port_columns
+                            && !(1..=48).contains(&columns)
+                        {
+                            errors.push(format!(
+                                "node {:?} port_columns must be between 1 and 48",
+                                node.id
+                            ));
+                        }
+                    }
+                    NodeKind::Server | NodeKind::Vm if node.nics.is_empty() => {
+                        errors.push(format!(
+                            "node {:?} needs at least one nic in architecture style",
+                            node.id
+                        ));
+                    }
+                    _ => {}
+                }
+
+                if node.ports.is_some() && node.kind != NodeKind::Switch {
+                    errors.push(format!("node {:?} sets ports but is not a switch", node.id));
+                }
+                if !node.nics.is_empty() && !matches!(node.kind, NodeKind::Server | NodeKind::Vm) {
+                    errors.push(format!(
+                        "node {:?} sets nics but is not a server or vm",
+                        node.id
+                    ));
+                }
+
+                let mut nic_ids = std::collections::HashSet::new();
+                for nic in &node.nics {
+                    if !valid_id(&nic.id) {
+                        errors.push(format!(
+                            "node {:?} nic id {:?} must use only letters, numbers, '-' and '_'",
+                            node.id, nic.id
+                        ));
+                    }
+                    if !nic_ids.insert(nic.id.as_str()) {
+                        errors.push(format!(
+                            "node {:?} has duplicate nic id {:?}",
+                            node.id, nic.id
+                        ));
+                    }
+                    if !(1..=16).contains(&nic.ports) {
+                        errors.push(format!(
+                            "node {:?} nic {:?} ports must be between 1 and 16",
+                            node.id, nic.id
+                        ));
+                    }
+                    if let Some(tone) = &nic.tone
+                        && !known_tone(tone)
+                    {
+                        errors.push(format!(
+                            "node {:?} nic {:?} has unknown tone {:?}",
+                            node.id, nic.id, tone
+                        ));
+                    }
+                }
             }
             if let Some([x, y]) = node.at
                 && (!x.is_finite() || !y.is_finite() || x < 0.0 || y < 0.0)
@@ -428,6 +564,135 @@ impl Diagram {
                     edge.to
                 ));
             }
+            if self.style == DiagramStyle::Detailed {
+                if edge.from_nic.is_some()
+                    || edge.from_port.is_some()
+                    || edge.to_nic.is_some()
+                    || edge.to_port.is_some()
+                {
+                    errors.push(format!(
+                        "edge #{} uses architecture port fields but style is detailed",
+                        index + 1
+                    ));
+                }
+            } else {
+                let from_node = self.nodes.iter().find(|node| node.id == edge.from);
+                let to_node = self.nodes.iter().find(|node| node.id == edge.to);
+
+                if edge.from_port.is_none() {
+                    errors.push(format!(
+                        "edge #{} needs from_port in architecture style",
+                        index + 1
+                    ));
+                }
+                if edge.to_port.is_none() {
+                    errors.push(format!(
+                        "edge #{} needs to_port in architecture style",
+                        index + 1
+                    ));
+                }
+                if from_node.is_some_and(|node| {
+                    matches!(node.kind, NodeKind::Server | NodeKind::Vm) && edge.from_nic.is_none()
+                }) {
+                    errors.push(format!(
+                        "edge #{} needs from_nic when the source is a server or vm",
+                        index + 1
+                    ));
+                }
+                if to_node.is_some_and(|node| {
+                    matches!(node.kind, NodeKind::Server | NodeKind::Vm) && edge.to_nic.is_none()
+                }) {
+                    errors.push(format!(
+                        "edge #{} needs to_nic when the target is a server or vm",
+                        index + 1
+                    ));
+                }
+
+                if let Some(node) = from_node {
+                    if let Some(nic_id) = &edge.from_nic {
+                        if let Some(nic) = node.nics.iter().find(|nic| &nic.id == nic_id) {
+                            if let Some(port) = edge.from_port {
+                                if port == 0 || port > nic.ports {
+                                    errors.push(format!(
+                                        "edge #{} from_port {} is outside nic {:?} on node {:?}",
+                                        index + 1,
+                                        port,
+                                        nic_id,
+                                        node.id
+                                    ));
+                                }
+                            } else {
+                                errors.push(format!(
+                                    "edge #{} sets from_nic without from_port",
+                                    index + 1
+                                ));
+                            }
+                        } else {
+                            errors.push(format!(
+                                "edge #{} references unknown nic {:?} on node {:?}",
+                                index + 1,
+                                nic_id,
+                                node.id
+                            ));
+                        }
+                    } else if let Some(port) = edge.from_port
+                        && node.kind == NodeKind::Switch
+                    {
+                        let ports = node.ports.unwrap_or(0);
+                        if port == 0 || port > ports {
+                            errors.push(format!(
+                                "edge #{} from_port {} is outside switch {:?}",
+                                index + 1,
+                                port,
+                                node.id
+                            ));
+                        }
+                    }
+                }
+
+                if let Some(node) = to_node {
+                    if let Some(nic_id) = &edge.to_nic {
+                        if let Some(nic) = node.nics.iter().find(|nic| &nic.id == nic_id) {
+                            if let Some(port) = edge.to_port {
+                                if port == 0 || port > nic.ports {
+                                    errors.push(format!(
+                                        "edge #{} to_port {} is outside nic {:?} on node {:?}",
+                                        index + 1,
+                                        port,
+                                        nic_id,
+                                        node.id
+                                    ));
+                                }
+                            } else {
+                                errors.push(format!(
+                                    "edge #{} sets to_nic without to_port",
+                                    index + 1
+                                ));
+                            }
+                        } else {
+                            errors.push(format!(
+                                "edge #{} references unknown nic {:?} on node {:?}",
+                                index + 1,
+                                nic_id,
+                                node.id
+                            ));
+                        }
+                    } else if let Some(port) = edge.to_port
+                        && node.kind == NodeKind::Switch
+                    {
+                        let ports = node.ports.unwrap_or(0);
+                        if port == 0 || port > ports {
+                            errors.push(format!(
+                                "edge #{} to_port {} is outside switch {:?}",
+                                index + 1,
+                                port,
+                                node.id
+                            ));
+                        }
+                    }
+                }
+            }
+
             if let Some(label) = &edge.label
                 && label.chars().count() > 100
             {
@@ -459,6 +724,10 @@ fn default_version() -> u32 {
 
 fn default_padding() -> f64 {
     32.0
+}
+
+fn default_nic_ports() -> usize {
+    1
 }
 
 fn default_true() -> bool {

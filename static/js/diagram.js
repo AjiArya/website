@@ -98,6 +98,7 @@
     const animationOptions = Array.from(
       figure.querySelectorAll("[data-dg-anim-action]"),
     );
+    const animationGroup = figure.querySelector("[data-dg-animation-group]");
     const speedControl = figure.querySelector("[data-dg-speed-control]");
     const speedButton = figure.querySelector("[data-dg-speed]");
     const speedRange = figure.querySelector("[data-dg-speed-range]");
@@ -362,9 +363,15 @@
 
     function updateHintText() {
       if (!hint) return;
-      hint.textContent = MOBILE.matches
-        ? "Drag to pan · Pinch to zoom · Drag a group to move it"
-        : "Left-drag to select · Shift adds · Right-drag to pan · Drag a group";
+      if (MOBILE.matches) {
+        hint.textContent = groups.length
+          ? "Drag to pan · Pinch to zoom · Drag a group to move it"
+          : "Drag to pan · Pinch to zoom · Drag a node to move it";
+      } else {
+        hint.textContent = `Left-drag to select · Shift adds · Right-drag to pan${
+          groups.length ? " · Drag a group" : ""
+        }`;
+      }
     }
 
     function zoomBy(factor, clientX, clientY) {
@@ -1742,6 +1749,27 @@
       return true;
     }
 
+    const clearEdgeHighlight = () => {
+      svg.classList.remove("is-highlighting");
+      for (const edge of edges) {
+        edge.path.classList.remove("is-highlighted");
+      }
+    };
+
+    for (const node of nodes) {
+      node.element.addEventListener("pointerenter", (event) => {
+        if (event.pointerType !== "mouse" || nodeDrag) return;
+        svg.classList.add("is-highlighting");
+        for (const edge of edges) {
+          edge.path.classList.toggle(
+            "is-highlighted",
+            edge.from === node.id || edge.to === node.id,
+          );
+        }
+      });
+      node.element.addEventListener("pointerleave", clearEdgeHighlight);
+    }
+
     // Animation controls
     animationOptions.forEach((option) => {
       option.addEventListener("click", () => {
@@ -2090,6 +2118,9 @@
       resizeObserver.observe(canvas);
     }
 
+    if (svg.dataset.dgStatic === "true" && animationGroup) {
+      animationGroup.hidden = true;
+    }
     updateSpeedLabel();
     updateDirectionLabel();
     updateHintText();

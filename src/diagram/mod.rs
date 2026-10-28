@@ -270,6 +270,95 @@ edges:
     }
 
     #[test]
+    fn architecture_style_renders_port_grids_and_links() {
+        let yaml = r#"
+version: 1
+style: architecture
+title: Architecture
+direction: TB
+nodes:
+  - id: leaf
+    kind: switch
+    label: leaf-01
+    ports: 8
+    port_columns: 4
+  - id: host
+    kind: server
+    label: host-01
+    nics:
+      - id: nic1
+        ports: 2
+      - id: nic2
+        ports: 2
+edges:
+  - from: host
+    from_nic: nic1
+    from_port: 1
+    to: leaf
+    to_port: 1
+  - from: host
+    from_nic: nic2
+    from_port: 1
+    to: leaf
+    to_port: 2
+"#;
+        let svg = render_yaml(yaml, "arch", false).unwrap();
+        assert!(svg.contains(r#"data-dg-kind="switch""#));
+        assert!(svg.contains(r#"data-dg-kind="server""#));
+        assert!(svg.contains("arch-port"));
+        assert!(svg.contains("arch-port-label"));
+        assert!(svg.contains("is-used"));
+        assert!(svg.contains(r#"data-dg-static="true""#));
+        assert_eq!(svg.matches("dg-edge ").count(), 2);
+    }
+
+    #[test]
+    fn detailed_style_rejects_architecture_fields() {
+        let yaml = r#"
+version: 1
+style: detailed
+title: Mixed
+nodes:
+  - id: a
+    label: A
+    kind: switch
+    ports: 8
+  - id: b
+    label: B
+edges:
+  - from: a
+    to: b
+"#;
+        assert!(render_yaml(yaml, "mixed", false).is_err());
+    }
+
+    #[test]
+    fn architecture_edges_require_ports() {
+        let yaml = r#"
+version: 1
+style: architecture
+title: Missing ports
+direction: TB
+nodes:
+  - id: leaf
+    kind: switch
+    label: leaf
+    ports: 8
+  - id: host
+    kind: server
+    label: host
+    nics:
+      - id: nic1
+        ports: 2
+edges:
+  - from: host
+    from_nic: nic1
+    to: leaf
+"#;
+        assert!(render_yaml(yaml, "missing-ports", false).is_err());
+    }
+
+    #[test]
     fn rejects_duplicate_node_ids() {
         let yaml = r#"
 version: 1

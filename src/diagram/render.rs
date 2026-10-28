@@ -4,8 +4,8 @@ use std::fmt::Write as _;
 use anyhow::Result;
 
 use crate::diagram::icons;
-use crate::diagram::layout::{DiagramLayout, LayoutEdge, LayoutGroup, LayoutNode};
-use crate::diagram::model::{Arrow, EdgeAnimation, EdgeStyle, Shape};
+use crate::diagram::layout::{DiagramLayout, LayoutEdge, LayoutGroup, LayoutNode, LayoutPort};
+use crate::diagram::model::{Arrow, EdgeAnimation, EdgeStyle, NodeKind, Shape};
 
 pub fn render(layout: &DiagramLayout, standalone: bool) -> Result<String> {
     let mut svg = String::new();
@@ -13,13 +13,18 @@ pub fn render(layout: &DiagramLayout, standalone: bool) -> Result<String> {
     let title_id = format!("{prefix}-title");
     let desc_id = format!("{prefix}-desc");
 
+    let static_diagram = layout
+        .edges
+        .iter()
+        .all(|edge| edge.animation == EdgeAnimation::None);
     let data_attrs = format!(
-        r#"data-dg-draw-ms="{}" data-dg-flow-ms="{}" data-dg-stagger-ms="{}" data-dg-direction="{}" data-dg-autoplay="{}""#,
+        r#"data-dg-draw-ms="{}" data-dg-flow-ms="{}" data-dg-stagger-ms="{}" data-dg-direction="{}" data-dg-autoplay="{}" data-dg-static="{}""#,
         layout.draw_ms,
         layout.flow_ms,
         layout.stagger_ms,
         layout.direction.as_str(),
-        layout.autoplay
+        layout.autoplay,
+        static_diagram
     );
     let style_vars = format!(
         "--dg-draw-duration:{}ms;--dg-flow-duration:{}ms;--dg-pulse-duration:2000ms",
@@ -202,6 +207,10 @@ fn render_edge(svg: &mut String, prefix: &str, index: usize, edge: &LayoutEdge) 
 }
 
 fn render_node(svg: &mut String, node: &LayoutNode) {
+    if node.arch.is_some() {
+        render_architecture_node(svg, node);
+        return;
+    }
     let rect = node.rect;
     let radius = match node.shape {
         Shape::Box => 6.0,
@@ -265,6 +274,187 @@ fn render_node(svg: &mut String, node: &LayoutNode) {
     svg.push_str("</text></g>");
 }
 
+fn render_architecture_node(svg: &mut String, node: &LayoutNode) {
+    let arch = node.arch.as_ref().unwrap();
+    let rect = node.rect;
+    let radius = match node.shape {
+        Shape::Box => 6.0,
+        Shape::Pill => rect.h / 2.0,
+    };
+    let kind_class = match arch.kind {
+        NodeKind::Switch => "dg-node--switch",
+        NodeKind::Server => "dg-node--server",
+        NodeKind::Vm => "dg-node--vm",
+        NodeKind::Generic => "dg-node--generic",
+    };
+    write!(
+        svg,
+        r#"<g class="dg-node dg-tone-{} {}" data-node="{}" data-group="{}" data-dg-lb="{}" data-dg-lb-algorithm="{}" data-dg-kind="{}"><rect class="dg-node-box" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" rx="{:.1}"/><rect class="dg-node-accent" x="{:.1}" y="{:.1}" width="3" height="{:.1}" rx="1.5"/>"#,
+        escape_attr(&node.tone),
+        kind_class,
+        escape_attr(&node.id),
+        escape_attr(node.group.as_deref().unwrap_or("")),
+        node.load_balancer,
+        node.lb_algorithm.as_str(),
+        escape_attr(match arch.kind {
+            NodeKind::Switch => "switch",
+            NodeKind::Server => "server",
+            NodeKind::Vm => "vm",
+            NodeKind::Generic => "generic",
+        }),
+        rect.x,
+        rect.y,
+        rect.w,
+        rect.h,
+        radius,
+        rect.x,
+        rect.y,
+        rect.h
+    )
+    .expect("writing to String cannot fail");
+
+    match arch.kind {
+        NodeKind::Switch => render_architecture_switch(svg, node),
+        NodeKind::Server | NodeKind::Vm => render_architecture_host(svg, node),
+        _ => {}
+    }
+
+    svg.push_str("</g>");
+}
+
+fn render_architecture_switch(svg: &mut String, node: &LayoutNode) {
+    let arch = node.arch.as_ref().unwrap();
+    let rect = node.rect;
+    let pad = 10.0;
+    let icon = node.icon.as_deref().unwrap_or("switch");
+    if let Some(markup) = icons::markup(icon) {
+        write!(
+            svg,
+            r#"<g class="dg-node-icon" transform="translate({:.1},{:.1}) scale(0.7)">{}</g>"#,
+            rect.x + pad,
+            rect.y + pad + 2.0,
+            markup
+        )
+        .expect("writing to String cannot fail");
+    }
+    let title = node.lines.join(" ");
+    write!(
+        svg,
+        r#"<text class="arch-node-title" x="{:.1}" y="{:.1}">{}</text>"#,
+        rect.x + pad + 24.0,
+        rect.y + pad + 16.0,
+        escape_xml(&title)
+    )
+    .expect("writing to String cannot fail");
+    write!(
+        svg,
+        r#"<text class="arch-node-meta" x="{:.1}" y="{:.1}" text-anchor="end">{} ports</text>"#,
+        rect.x + rect.w - pad,
+        rect.y + pad + 16.0,
+        arch.ports.len()
+    )
+    .expect("writing to String cannot fail");
+
+    for port in &arch.ports {
+        render_architecture_port(svg, port);
+    }
+}
+
+fn render_architecture_host(svg: &mut String, node: &LayoutNode) {
+    let arch = node.arch.as_ref().unwrap();
+    let rect = node.rect;
+
+    for nic in &arch.nics {
+        write!(
+            svg,
+            r#"<rect class="arch-nic dg-tone-{}" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" rx="4"/>"#,
+            escape_attr(&nic.tone),
+            nic.rect.x,
+            nic.rect.y,
+            nic.rect.w,
+            nic.rect.h
+        )
+        .expect("writing to String cannot fail");
+        write!(
+            svg,
+            r#"<text class="arch-nic-label" x="{:.1}" y="{:.1}" text-anchor="middle">{}</text>"#,
+            nic.rect.center().x,
+            nic.rect.bottom() - 3.5,
+            escape_xml(&nic.id)
+        )
+        .expect("writing to String cannot fail");
+    }
+
+    for port in &arch.ports {
+        render_architecture_port(svg, port);
+    }
+
+    let icon = node.icon.as_deref().unwrap_or(match arch.kind {
+        NodeKind::Vm => "vm",
+        _ => "server",
+    });
+    let text_x;
+    let text_anchor;
+    if let Some(markup) = icons::markup(icon) {
+        let ix = rect.x + 16.0;
+        let iy = rect.y + rect.h - 31.0;
+        write!(
+            svg,
+            r#"<g class="dg-node-icon" transform="translate({ix:.1},{iy:.1}) scale(0.7)">{markup}</g>"#
+        )
+        .expect("writing to String cannot fail");
+        text_x = rect.x + 42.0;
+        text_anchor = "start";
+    } else {
+        text_x = rect.x + rect.w / 2.0;
+        text_anchor = "middle";
+    }
+
+    let line_count = node.lines.len() as f64;
+    let first_y = rect.y + rect.h - 22.0 - (line_count - 1.0) * 8.0;
+    write!(
+        svg,
+        r#"<text class="arch-node-title" x="{:.1}" y="{:.1}" text-anchor="{}">"#,
+        text_x, first_y, text_anchor
+    )
+    .expect("writing to String cannot fail");
+    for (index, line) in node.lines.iter().enumerate() {
+        write!(
+            svg,
+            r#"<tspan x="{:.1}" y="{:.1}">{}</tspan>"#,
+            text_x,
+            first_y + index as f64 * 16.0,
+            escape_xml(line)
+        )
+        .expect("writing to String cannot fail");
+    }
+    svg.push_str("</text>");
+}
+
+fn render_architecture_port(svg: &mut String, port: &LayoutPort) {
+    let used = if port.used { " is-used" } else { "" };
+    write!(
+        svg,
+        r#"<rect class="arch-port dg-tone-{} {}" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" rx="1"/>"#,
+        escape_attr(&port.tone),
+        used.trim(),
+        port.rect.x,
+        port.rect.y,
+        port.rect.w,
+        port.rect.h
+    )
+    .expect("writing to String cannot fail");
+    write!(
+        svg,
+        r#"<text class="arch-port-label{}" x="{:.1}" y="{:.1}" text-anchor="middle">{}</text>"#,
+        used,
+        port.rect.center().x,
+        port.rect.center().y + 2.0,
+        port.index
+    )
+    .expect("writing to String cannot fail");
+}
+
 fn style_class(style: EdgeStyle) -> &'static str {
     match style {
         EdgeStyle::Solid => "solid",
@@ -324,6 +514,15 @@ const STANDALONE_CSS: &str = r#"
 .dg-node-accent{fill:var(--dg-tone)}
 .dg-node-label{fill:var(--dg-text);font-size:13px;font-weight:560;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .dg-node-icon{fill:none;stroke:var(--dg-tone);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.dg-node--vm .dg-node-box{stroke-dasharray:4 3}
+.arch-node-title{fill:var(--dg-text);font-size:11px;font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.arch-node-meta{fill:var(--dg-muted);font-size:7px;letter-spacing:.04em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.arch-nic{fill:rgba(127,145,130,.10);stroke:var(--dg-tone);stroke-width:.8;stroke-opacity:.55}
+.arch-nic-label{fill:var(--dg-tone);font-size:6.5px;font-weight:650;letter-spacing:.04em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.arch-port{fill:var(--dg-bg);stroke:#2c3a30;stroke-width:.7}
+.arch-port.is-used{fill:var(--dg-tone);stroke:var(--dg-tone)}
+.arch-port-label{fill:var(--dg-muted);font-size:4.8px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.arch-port-label.is-used{fill:var(--dg-bg);font-weight:700}
 .dg-edge{fill:none;stroke:var(--dg-tone);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
 .dg-edge--draw{stroke-dasharray:1;stroke-dashoffset:1;animation:dg-draw var(--dg-draw-duration,1200ms) ease forwards;animation-delay:var(--dg-delay,0ms)}
 .dg-style-dashed{stroke-dasharray:.025 .018}
