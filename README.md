@@ -90,7 +90,7 @@ Diagrams are referenced from Markdown with a Tera component:
 Diagram definitions are text YAML in `diagrams/`, versioned with the content —
 no binary diagram assets. The compiler uses distributed ports, obstacle-aware
 routing, and separated lanes so edges avoid boxes and parallel paths do not
-collapse into one line. The viewer adds a play/pause/disable menu, a speed
+collapse into one line. The viewer adds visible Start/Pause/Disable buttons, a speed
 slider, clickable direction options (two-way by default), per-node load-balancer
 packet distribution (round robin, random, least connections), on-edge trailing
 glow, box and shift multi-select, group dragging, scroll/pinch zoom, right-drag

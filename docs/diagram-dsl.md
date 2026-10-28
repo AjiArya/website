@@ -160,9 +160,9 @@ diagram is off-screen.
 
 Diagrams are rendered inside a fixed-height SVG canvas with a toolbar:
 
-- **Animation menu**: hover, focus, or click the animation button for **Play**,
-  **Pause**, and **Disable**. Disable hides packets and trails and settles
-  draw/pulse effects at their completed state.
+- **Start/Pause/Disable**: visible toolbar buttons for starting, freezing, or
+  disabling animation. Disable hides packets and trails and settles draw/pulse
+  effects at their completed state; the active state is highlighted.
 - **Speed**: hover or focus the speed value for a slider with 0.25×, 0.5×, 1×,
   1.5×, and 2× stops.
 - **Direction**: hover, focus, or click the arrow for clickable **Forward**,

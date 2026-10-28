@@ -342,11 +342,6 @@
   left: auto;
 }
 
-.diagram__popover[data-dg-animation-control] .diagram__popover-panel {
-  right: auto;
-  left: 0;
-}
-
 .diagram__options-panel {
   width: 168px;
   padding: 6px;
@@ -510,20 +505,10 @@
   }
 
   .diagram__popover-panel {
-    right: auto;
-    left: 0;
-    width: 188px;
+    right: 0;
+    left: auto;
+    width: 176px;
     padding: 12px 14px 10px;
-  }
-
-  .diagram__popover--end .diagram__popover-panel,
-  .diagram__popover[data-dg-animation-control] .diagram__popover-panel {
-    right: auto;
-    left: 0;
-  }
-
-  .diagram__popover[data-dg-animation-control] .diagram__popover-panel {
-    width: 168px;
   }
 
   .diagram__options-panel {

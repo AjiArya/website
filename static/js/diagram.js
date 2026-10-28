@@ -95,12 +95,6 @@
       motionOff: false,
     };
 
-    const animationControl = figure.querySelector(
-      "[data-dg-animation-control]",
-    );
-    const animationButton = figure.querySelector("[data-dg-animation]");
-    const animationIcon = figure.querySelector("[data-dg-animation-icon]");
-    const animationLabel = figure.querySelector("[data-dg-animation-label]");
     const animationOptions = Array.from(
       figure.querySelectorAll("[data-dg-anim-action]"),
     );
@@ -570,6 +564,19 @@
       const obstacles = nodes
         .filter((node) => node !== fromNode && node !== toNode)
         .map((node) => currentRect(node));
+
+      const otherSegments = [];
+      for (const other of edges) {
+        if (other === edge) continue;
+        const points = parsePathPoints(other.path.getAttribute("d"));
+        for (let index = 1; index < points.length; index += 1) {
+          const a = points[index - 1];
+          const b = points[index];
+          if (Math.abs(a.x - b.x) < 0.1 || Math.abs(a.y - b.y) < 0.1) {
+            otherSegments.push({ a, b });
+          }
+        }
+      }
       for (const rect of obstacles) {
         xs.add(rect.x - 20);
         xs.add(rect.x + rect.w + 20);
@@ -618,6 +625,28 @@
           score += Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
           for (const rect of obstacles) {
             if (segmentHitsRect(a, b, rect)) score += 1e6;
+          }
+          for (const other of otherSegments) {
+            const horizontal =
+              Math.abs(a.y - b.y) < 0.1 &&
+              Math.abs(other.a.y - other.b.y) < 0.1 &&
+              Math.abs(a.y - other.a.y) < 1.2;
+            if (horizontal) {
+              const overlap =
+                Math.min(Math.max(a.x, b.x), Math.max(other.a.x, other.b.x)) -
+                Math.max(Math.min(a.x, b.x), Math.min(other.a.x, other.b.x));
+              if (overlap > 2) score += 3000 + overlap * 30;
+            }
+            const vertical =
+              Math.abs(a.x - b.x) < 0.1 &&
+              Math.abs(other.a.x - other.b.x) < 0.1 &&
+              Math.abs(a.x - other.a.x) < 1.2;
+            if (vertical) {
+              const overlap =
+                Math.min(Math.max(a.y, b.y), Math.max(other.a.y, other.b.y)) -
+                Math.max(Math.min(a.y, b.y), Math.min(other.a.y, other.b.y));
+              if (overlap > 2) score += 3000 + overlap * 30;
+            }
           }
           for (const point of [a, b]) {
             if (
@@ -681,18 +710,24 @@
         // Keep untouched edges byte-for-byte identical. For incident edges,
         // translate the original ports and elbows so the obstacle-aware route
         // survives the drag instead of being rerouted through other nodes.
+        const fromShifted =
+          Math.abs(fromNode.tx) > 0.01 || Math.abs(fromNode.ty) > 0.01;
+        const toShifted =
+          Math.abs(toNode.tx) > 0.01 || Math.abs(toNode.ty) > 0.01;
+        const bothShifted = fromShifted && toShifted;
         const sameOffset =
+          bothShifted &&
           Math.abs(fromNode.tx - toNode.tx) < 0.01 &&
           Math.abs(fromNode.ty - toNode.ty) < 0.01;
 
         let label = null;
-        if (fromMoved && toMoved && sameOffset) {
+        if (bothShifted && sameOffset) {
           const points = edge.points.map((point) => ({
             x: point.x + fromNode.tx,
             y: point.y + fromNode.ty,
           }));
           edge.path.setAttribute("d", pointsToPath(points));
-        } else if (fromMoved && toMoved && edge.route === "elbow") {
+        } else if (bothShifted && edge.route === "elbow") {
           const live = liveElbowRoute(edge, fromNode, toNode);
           if (live) {
             edge.path.setAttribute("d", live.d);
@@ -706,7 +741,7 @@
             label = geometry.label;
           }
         } else if (
-          (fromMoved && toMoved) ||
+          bothShifted ||
           edge.route !== "elbow" ||
           edge.points.length < 3
         ) {
@@ -719,10 +754,10 @@
           label = geometry.label;
         } else {
           const points = edge.points.map((point) => ({ ...point }));
-          if (fromMoved) {
+          if (fromShifted) {
             shiftStart(points, fromNode.tx, fromNode.ty);
           }
-          if (toMoved) {
+          if (toShifted) {
             shiftEnd(points, toNode.tx, toNode.ty);
           }
           edge.path.setAttribute("d", pointsToPath(points));
@@ -998,38 +1033,14 @@
       }
     }
 
-    function updateAnimationButton() {
-      if (!animationButton) return;
-      let status;
-      let statusName;
-      let icon;
-      let label;
-      if (state.motionOff) {
-        status = "disable";
-        statusName = "disabled";
-        icon = "■";
-        label = "Off";
-      } else if (state.userPaused) {
-        status = "pause";
-        statusName = "paused";
-        icon = "▶";
-        label = "Play";
-      } else {
-        status = "play";
-        statusName = "playing";
-        icon = "❚❚";
-        label = "Pause";
-      }
-      if (animationIcon) animationIcon.textContent = icon;
-      if (animationLabel) animationLabel.textContent = label;
-      animationButton.setAttribute(
-        "aria-label",
-        `Animation ${statusName}. Open animation options.`,
-      );
-      animationButton.setAttribute("title", "Animation options");
+    function updateAnimationButtons() {
+      const status = state.motionOff
+        ? "disable"
+        : state.userPaused
+          ? "pause"
+          : "play";
       animationOptions.forEach((option) => {
-        const action = option.dataset.dgAnimAction;
-        const active = action === status;
+        const active = option.dataset.dgAnimAction === status;
         option.classList.toggle("is-active", active);
         option.setAttribute("aria-pressed", String(active));
       });
@@ -1106,7 +1117,7 @@
         edge.style.animationPlayState = running ? "running" : "paused";
       });
       syncPackets();
-      updateAnimationButton();
+      updateAnimationButtons();
     }
 
     function togglePlay() {
@@ -1732,22 +1743,9 @@
     }
 
     // Animation controls
-    animationButton?.addEventListener("click", () => {
-      speedControl?.classList.remove("is-open");
-      directionControl?.classList.remove("is-open");
-      animationControl?.classList.add("is-open");
-      window.requestAnimationFrame(() => animationOptions[0]?.focus());
-    });
-
     animationOptions.forEach((option) => {
-      option.addEventListener("click", (event) => {
+      option.addEventListener("click", () => {
         setAnimation(option.dataset.dgAnimAction);
-        animationControl?.classList.remove("is-open");
-        if (event.detail > 0) {
-          option.blur();
-        } else {
-          animationButton?.focus();
-        }
       });
     });
 
@@ -1771,7 +1769,6 @@
 
     directionButton?.addEventListener("click", () => {
       speedControl?.classList.remove("is-open");
-      animationControl?.classList.remove("is-open");
       directionControl?.classList.add("is-open");
       window.requestAnimationFrame(() => directionOptions[0]?.focus());
     });
@@ -1792,22 +1789,13 @@
     });
 
     speedControl?.addEventListener("mouseenter", () => {
-      animationControl?.classList.remove("is-open");
       directionControl?.classList.remove("is-open");
     });
     directionControl?.addEventListener("mouseenter", () => {
-      animationControl?.classList.remove("is-open");
       speedControl?.classList.remove("is-open");
-    });
-    animationControl?.addEventListener("mouseenter", () => {
-      speedControl?.classList.remove("is-open");
-      directionControl?.classList.remove("is-open");
     });
 
     document.addEventListener("pointerdown", (event) => {
-      if (animationControl && !animationControl.contains(event.target)) {
-        animationControl.classList.remove("is-open");
-      }
       if (speedControl && !speedControl.contains(event.target)) {
         speedControl.classList.remove("is-open");
       }
