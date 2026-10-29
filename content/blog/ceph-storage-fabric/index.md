@@ -49,7 +49,7 @@ On a host, the two NIC blocks show the port-level wiring directly:
 - `nic2/1` → `leaf-01`
 - `nic2/2` → `leaf-02`
 
-The blue and amber port cells distinguish the two NICs. The leaf port numbers make the same mapping visible from the switch side. Hovering any host highlights its four links and dims the rest; the diagram is also pan/zoomable for detail.
+The blue and amber port cells distinguish the two NICs. All four links for a host share the host’s bond color, so the redundant bond reads as one unit on the fabric side; the leaf port numbers make the same mapping visible from the switch side. Hovering any host highlights its four links and dims the rest; the diagram is also pan/zoomable for detail.
 
 ## What I check first
 

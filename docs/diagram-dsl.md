@@ -146,10 +146,12 @@ networks:
 ```
 
 Logical diagrams use `networks` instead of `edges`. Each network has a label,
-optional tone, and a member list. The first network is drawn as the left rail,
-the second as the right rail, and additional networks alternate outward. Nodes
-are stacked vertically between the rails. Node dragging is disabled in this
-style because the rails are fixed; pan, zoom, fit, reset, and PNG remain.
+optional tone, and a member list. The first network is drawn as the top rail,
+the second as the bottom rail, and additional networks alternate outward. Nodes
+are arranged in a horizontal row between the rails, with a legend in the
+top-left. Bond links use the host tone, while server port cells keep their NIC
+tones. Node dragging is disabled in this style because the rails are fixed; pan,
+zoom, fit, reset, and PNG remain.
 
 Architecture-simple rules:
 

@@ -492,27 +492,43 @@ fn render_network(
         svg,
         r#"<line class="network-rail dg-tone-{}" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"/>"#,
         escape_attr(&network.tone),
-        network.x,
+        network.x1,
         network.y1,
-        network.x,
+        network.x2,
         network.y2
     )?;
     for member in &network.members {
         if let Some(node) = layout.nodes.iter().find(|node| &node.id == member) {
-            let y = node.rect.center().y;
-            let (x1, x2) = if network.left {
-                (node.rect.x, network.x)
+            let (x1, y1, x2, y2) = if network.horizontal {
+                let x = node.rect.center().x;
+                if network.y1 < node.rect.center().y {
+                    (x, node.rect.y, x, network.y1)
+                } else {
+                    (x, node.rect.bottom(), x, network.y1)
+                }
+            } else if network.x1 < node.rect.center().x {
+                (
+                    node.rect.x,
+                    node.rect.center().y,
+                    network.x1,
+                    node.rect.center().y,
+                )
             } else {
-                (network.x, node.rect.right())
+                (
+                    node.rect.right(),
+                    node.rect.center().y,
+                    network.x1,
+                    node.rect.center().y,
+                )
             };
             write!(
                 svg,
                 r#"<line class="network-stub dg-tone-{}" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"/>"#,
                 escape_attr(&network.tone),
                 x1,
-                y,
+                y1,
                 x2,
-                y
+                y2
             )?;
         }
     }

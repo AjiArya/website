@@ -97,10 +97,11 @@ pub struct LayoutArchitecture {
 pub struct LayoutNetwork {
     pub label: String,
     pub tone: String,
-    pub x: f64,
+    pub x1: f64,
     pub y1: f64,
+    pub x2: f64,
     pub y2: f64,
-    pub left: bool,
+    pub horizontal: bool,
     pub members: Vec<String>,
 }
 
@@ -273,28 +274,32 @@ fn size_node(node: &crate::diagram::model::Node) -> (Vec<String>, f64, f64) {
 
 fn simple_positions(diagram: &Diagram, nodes: &mut [LayoutNode]) -> (f64, f64, Vec<LayoutNetwork>) {
     let padding = diagram.padding;
-    let node_gap = 28.0;
-    let lane_gap = 28.0;
-    let rail_gap = 34.0;
-    let node_width = nodes.iter().map(|node| node.rect.w).fold(0.0_f64, f64::max);
-    let left_count = diagram
+    let node_gap = 22.0;
+    let node_width: f64 = nodes.iter().map(|node| node.rect.w).sum::<f64>()
+        + node_gap * nodes.len().saturating_sub(1) as f64;
+    let legend_height = diagram.networks.len() as f64 * 16.0;
+    let top_count = diagram
         .networks
         .iter()
         .enumerate()
         .filter(|(index, _)| index % 2 == 0)
         .count();
-    let right_count = diagram.networks.len().saturating_sub(left_count);
-    let left_margin = padding + rail_gap + left_count as f64 * lane_gap;
-    let right_margin = padding + rail_gap + right_count as f64 * lane_gap;
-    let width = left_margin + node_width + right_margin;
+    let bottom_count = diagram.networks.len().saturating_sub(top_count);
+    let top_start = padding + 22.0 + legend_height;
+    let node_top = top_start + top_count as f64 * 24.0 + 30.0;
 
-    let mut y = padding + 34.0 + diagram.networks.len() as f64 * 16.0;
+    let mut x = padding;
     for node in nodes.iter_mut() {
-        node.rect.x = left_margin + (node_width - node.rect.w) / 2.0;
-        node.rect.y = y;
-        y += node.rect.h + node_gap;
+        node.rect.x = x;
+        node.rect.y = node_top + 0.0;
+        x += node.rect.w + node_gap;
     }
-    let height = y - node_gap + padding;
+    let width = node_width + padding * 2.0;
+    let node_bottom = nodes
+        .iter()
+        .map(|node| node.rect.bottom())
+        .fold(node_top, f64::max);
+    let height = node_bottom + 30.0 + bottom_count as f64 * 24.0 + padding;
 
     let by_id: HashMap<&str, Rect> = nodes
         .iter()
@@ -302,31 +307,31 @@ fn simple_positions(diagram: &Diagram, nodes: &mut [LayoutNode]) -> (f64, f64, V
         .collect();
     let mut networks = Vec::with_capacity(diagram.networks.len());
     for (index, network) in diagram.networks.iter().enumerate() {
-        let left = index % 2 == 0;
+        let top = index % 2 == 0;
         let lane = index / 2;
-        let x = if left {
-            padding + 16.0 + lane as f64 * lane_gap
+        let y = if top {
+            top_start + lane as f64 * 24.0
         } else {
-            width - padding - 16.0 - lane as f64 * lane_gap
+            node_bottom + 30.0 + lane as f64 * 24.0
         };
-        let mut member_y: Vec<f64> = network
+        let member_x: Vec<f64> = network
             .members
             .iter()
-            .filter_map(|member| by_id.get(member.as_str()).map(|rect| rect.center().y))
+            .filter_map(|member| by_id.get(member.as_str()).map(|rect| rect.center().x))
             .collect();
-        member_y.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        let y1 = member_y.first().copied().unwrap_or(y).min(y) - 12.0;
-        let y2 = member_y.last().copied().unwrap_or(y) + 12.0;
+        let x1 = member_x.first().copied().unwrap_or(padding);
+        let x2 = member_x.last().copied().unwrap_or(width - padding);
         networks.push(LayoutNetwork {
             label: network.label.clone(),
             tone: network
                 .tone
                 .clone()
                 .unwrap_or_else(|| "neutral".to_string()),
-            x,
-            y1,
-            y2,
-            left,
+            x1,
+            y1: y,
+            x2,
+            y2: y,
+            horizontal: true,
             members: network.members.clone(),
         });
     }
@@ -1173,20 +1178,11 @@ fn route_architecture_edges(diagram: &Diagram, nodes: &mut [LayoutNode]) -> Vec<
             .as_deref()
             .and_then(|key| architecture_port_index(&nodes[to_index], key));
 
+        // All members of a host bond share the host's tone. NIC tones stay on
+        // the NIC port grids so the physical NICs remain distinguishable.
         let tone = edge
             .tone
             .clone()
-            .or_else(|| {
-                edge.from_nic.as_ref().and_then(|nic_id| {
-                    nodes[from_index]
-                        .arch
-                        .as_ref()?
-                        .nics
-                        .iter()
-                        .find(|nic| &nic.id == nic_id)
-                        .map(|nic| nic.tone.clone())
-                })
-            })
             .unwrap_or_else(|| nodes[from_index].tone.clone());
 
         if let Some(port_index) = from_port_index {
