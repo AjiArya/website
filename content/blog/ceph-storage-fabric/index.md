@@ -12,6 +12,12 @@ demo = true
 +++
 A Ceph cluster is only as reliable as the fabric underneath it. The monitor quorum needs low, predictable latency, and the OSDs need enough independent paths that losing a NIC, a cable, or a leaf switch does not turn into a storage outage.
 
+The logical view is deliberately simpler: it shows which hosts participate in the Ceph public network and which participate in the cluster network.
+
+{{<diagram name="ceph-storage-fabric-simple" caption="Ceph logical networks: the public network connects clients, monitors, and OSDs, while the cluster network carries MON and OSD traffic." />}}
+
+The physical view below expands that into NICs, ports, leaf switches, and individual links.
+
 {{<diagram name="ceph-storage-fabric" caption="Three MON hosts and three OSD hosts, each with two dual-port NICs, dual-homed to two leaf switches. The bond crosses NICs and leafs." />}}
 
 ## The topology
@@ -25,6 +31,12 @@ Six physical hosts sit below a pair of 48-port leaf switches. Each host has two 
 That gives every host four independent paths to the fabric. The useful redundancy comes from the fact that the members of the bond come from different NICs and land on different leaf switches. A single failed NIC or cable cannot take the host off the network, and a single leaf failure still leaves half of the bond alive.
 
 For a single bond to span both leaf switches, the leaves need to behave as one logical LAG endpoint — normally an MLAG or a stacked pair. Without that, use separate bonds per leaf and let multipath routing handle failover at layer 3.
+
+## Logical networks
+
+The public network is the client-facing path: clients reach RGW/MON services and the OSDs accept front-end traffic. The cluster network is the private back-end for monitor and OSD replication and heartbeat traffic. Keeping them separate makes it easier to reason about latency and failure isolation, especially during recovery.
+
+A host can be on both networks. In the logical diagram, the two colored rails show that membership directly; in the physical diagram, the same host has separate NICs and ports for each path.
 
 ## Reading the port grid
 

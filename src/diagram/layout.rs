@@ -94,6 +94,17 @@ pub struct LayoutArchitecture {
 }
 
 #[derive(Debug, Clone)]
+pub struct LayoutNetwork {
+    pub label: String,
+    pub tone: String,
+    pub x: f64,
+    pub y1: f64,
+    pub y2: f64,
+    pub left: bool,
+    pub members: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct LayoutGroup {
     pub id: String,
     pub label: String,
@@ -123,9 +134,13 @@ pub struct DiagramLayout {
     pub description: String,
     pub width: f64,
     pub height: f64,
+    pub padding: f64,
     pub nodes: Vec<LayoutNode>,
     pub groups: Vec<LayoutGroup>,
     pub edges: Vec<LayoutEdge>,
+    pub networks: Vec<LayoutNetwork>,
+    pub no_drag: bool,
+    pub fit_mobile: bool,
     pub prefix: String,
     pub draw_ms: u32,
     pub flow_ms: u32,
@@ -137,12 +152,13 @@ pub struct DiagramLayout {
 pub fn layout(diagram: &Diagram, prefix: &str) -> Result<DiagramLayout> {
     diagram.validate()?;
 
-    let architecture = diagram.style == DiagramStyle::Architecture;
+    let architecture_detailed = diagram.style == DiagramStyle::ArchitectureDetailed;
+    let architecture_simple = diagram.style == DiagramStyle::ArchitectureSimple;
     let mut nodes: Vec<LayoutNode> = diagram
         .nodes
         .iter()
         .map(|node| {
-            let (lines, w, h, arch) = if architecture {
+            let (lines, w, h, arch) = if architecture_detailed {
                 architecture_geometry(node)
             } else {
                 let (lines, w, h) = size_node(node);
@@ -168,34 +184,49 @@ pub fn layout(diagram: &Diagram, prefix: &str) -> Result<DiagramLayout> {
         })
         .collect();
 
-    if architecture {
-        auto_positions_architecture(diagram, &mut nodes);
+    let mut groups = Vec::new();
+    let mut networks = Vec::new();
+    let (width, height);
+    if architecture_simple {
+        let result = simple_positions(diagram, &mut nodes);
+        width = result.0;
+        height = result.1;
+        networks = result.2;
     } else {
-        match diagram.layout {
-            LayoutMode::Manual => {
-                for (node, layout_node) in diagram.nodes.iter().zip(nodes.iter_mut()) {
-                    let [x, y] = node.at.expect("validated manual layout");
-                    layout_node.rect.x = x;
-                    layout_node.rect.y = y;
+        if architecture_detailed {
+            auto_positions_architecture(diagram, &mut nodes);
+        } else {
+            match diagram.layout {
+                LayoutMode::Manual => {
+                    for (node, layout_node) in diagram.nodes.iter().zip(nodes.iter_mut()) {
+                        let [x, y] = node.at.expect("validated manual layout");
+                        layout_node.rect.x = x;
+                        layout_node.rect.y = y;
+                    }
                 }
+                LayoutMode::Auto => auto_positions(diagram, &mut nodes)?,
             }
-            LayoutMode::Auto => auto_positions(diagram, &mut nodes)?,
         }
+
+        groups = if architecture_detailed {
+            Vec::new()
+        } else {
+            build_groups(diagram, &nodes)
+        };
+        shift_to_origin(&mut nodes, &mut groups, diagram.padding);
+        if architecture_detailed {
+            offset_architecture_rects(&mut nodes);
+        }
+
+        let size = canvas_size(&nodes, &groups, diagram.padding);
+        width = size.0;
+        height = size.1;
     }
 
-    let mut groups = if architecture {
-        Vec::new()
-    } else {
-        build_groups(diagram, &nodes)
-    };
-    shift_to_origin(&mut nodes, &mut groups, diagram.padding);
-    if architecture {
-        offset_architecture_rects(&mut nodes);
-    }
-
-    let (width, height) = canvas_size(&nodes, &groups, diagram.padding);
-    let edges = if architecture {
+    let edges = if architecture_detailed {
         route_architecture_edges(diagram, &mut nodes)
+    } else if architecture_simple {
+        Vec::new()
     } else {
         route_edges(diagram, &nodes, &groups)
     };
@@ -208,9 +239,13 @@ pub fn layout(diagram: &Diagram, prefix: &str) -> Result<DiagramLayout> {
             .unwrap_or_else(|| format!("Architecture diagram: {}", diagram.title)),
         width,
         height,
+        padding: diagram.padding,
         nodes,
         groups,
         edges,
+        networks,
+        no_drag: architecture_simple,
+        fit_mobile: architecture_detailed || architecture_simple,
         prefix: prefix.to_string(),
         draw_ms: diagram.animation.draw_ms,
         flow_ms: diagram.animation.flow_ms,
@@ -234,6 +269,69 @@ fn size_node(node: &crate::diagram::model::Node) -> (Vec<String>, f64, f64) {
         .height
         .unwrap_or((22.0 + lines.len() as f64 * 18.0).max(52.0));
     (lines, width, height)
+}
+
+fn simple_positions(diagram: &Diagram, nodes: &mut [LayoutNode]) -> (f64, f64, Vec<LayoutNetwork>) {
+    let padding = diagram.padding;
+    let node_gap = 28.0;
+    let lane_gap = 28.0;
+    let rail_gap = 34.0;
+    let node_width = nodes.iter().map(|node| node.rect.w).fold(0.0_f64, f64::max);
+    let left_count = diagram
+        .networks
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| index % 2 == 0)
+        .count();
+    let right_count = diagram.networks.len().saturating_sub(left_count);
+    let left_margin = padding + rail_gap + left_count as f64 * lane_gap;
+    let right_margin = padding + rail_gap + right_count as f64 * lane_gap;
+    let width = left_margin + node_width + right_margin;
+
+    let mut y = padding + 34.0 + diagram.networks.len() as f64 * 16.0;
+    for node in nodes.iter_mut() {
+        node.rect.x = left_margin + (node_width - node.rect.w) / 2.0;
+        node.rect.y = y;
+        y += node.rect.h + node_gap;
+    }
+    let height = y - node_gap + padding;
+
+    let by_id: HashMap<&str, Rect> = nodes
+        .iter()
+        .map(|node| (node.id.as_str(), node.rect))
+        .collect();
+    let mut networks = Vec::with_capacity(diagram.networks.len());
+    for (index, network) in diagram.networks.iter().enumerate() {
+        let left = index % 2 == 0;
+        let lane = index / 2;
+        let x = if left {
+            padding + 16.0 + lane as f64 * lane_gap
+        } else {
+            width - padding - 16.0 - lane as f64 * lane_gap
+        };
+        let mut member_y: Vec<f64> = network
+            .members
+            .iter()
+            .filter_map(|member| by_id.get(member.as_str()).map(|rect| rect.center().y))
+            .collect();
+        member_y.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let y1 = member_y.first().copied().unwrap_or(y).min(y) - 12.0;
+        let y2 = member_y.last().copied().unwrap_or(y) + 12.0;
+        networks.push(LayoutNetwork {
+            label: network.label.clone(),
+            tone: network
+                .tone
+                .clone()
+                .unwrap_or_else(|| "neutral".to_string()),
+            x,
+            y1,
+            y2,
+            left,
+            members: network.members.clone(),
+        });
+    }
+
+    (width, height, networks)
 }
 
 fn architecture_geometry(

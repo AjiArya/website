@@ -59,15 +59,19 @@ A diagram declares exactly one style:
 - **`detailed`** — the original style, used by the Ceph data-path and Kubernetes
   diagrams. It supports groups, flow/pulse animation, load-balancer nodes, and
   node dragging.
-- **`architecture`** — physical and virtual infrastructure with switch/server/VM
-  node kinds, full NIC and switch port grids, and port-to-port links. Architecture
-  diagrams are static by default and use the same pan/zoom/drag/PNG viewer.
+- **`architecture-detailed`** — physical and virtual infrastructure with
+  switch/server/VM node kinds, full NIC and switch port grids, and port-to-port
+  links. Architecture diagrams are static by default and use the same
+  pan/zoom/drag/PNG viewer.
+- **`architecture-simple`** — logical network membership only. Networks are drawn
+  as rails and nodes attach to the rails they belong to; there are no ports or
+  physical links.
 
-### Architecture style
+### Architecture detailed style
 
 ```yaml
 version: 1
-style: architecture
+style: architecture-detailed
 title: Ceph storage fabric
 direction: TB
 
@@ -111,14 +115,54 @@ Architecture rules:
   use are highlighted and take the tone of the connected NIC.
 - Hovering a node highlights its incident links and dims the rest, which makes a
   dense fabric traceable without zooming.
-- `groups` and manual layout are not supported in architecture style.
+- `groups` and manual layout are not supported in architecture styles.
+
+### Architecture simple style
+
+```yaml
+version: 1
+style: architecture-simple
+title: Ceph logical networks
+direction: TB
+nodes:
+  - id: client
+    kind: generic
+    label: Clients
+  - id: mon1
+    kind: server
+    label: ceph-mon-01
+  - id: osd1
+    kind: server
+    label: ceph-osd-01
+networks:
+  - id: public
+    label: Public network
+    tone: blue
+    members: [client, mon1, osd1]
+  - id: cluster
+    label: Cluster network
+    tone: amber
+    members: [mon1, osd1]
+```
+
+Logical diagrams use `networks` instead of `edges`. Each network has a label,
+optional tone, and a member list. The first network is drawn as the left rail,
+the second as the right rail, and additional networks alternate outward. Nodes
+are stacked vertically between the rails. Node dragging is disabled in this
+style because the rails are fixed; pan, zoom, fit, reset, and PNG remain.
+
+Architecture-simple rules:
+
+- `direction: TB`, `layout: auto`, no groups, and no edges.
+- No NIC or port fields on nodes.
+- At least one network, each with two or more existing node members.
 
 ## Top-level fields
 
 | Field | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `version` | integer | `1` | Must be `1`. |
-| `style` | `detailed` or `architecture` | `detailed` | One style per diagram. |
+| `style` | `detailed`, `architecture-detailed`, or `architecture-simple` | `detailed` | One style per diagram. |
 | `title` | string | required | Used in the SVG `<title>`. |
 | `description` | string | derived | Used in the SVG `<desc>`. |
 | `direction` | `LR` or `TB` | `LR` | Rank direction for auto layout. |
@@ -126,7 +170,8 @@ Architecture rules:
 | `padding` | number | `32` | Canvas padding, 0–200. |
 | `nodes` | list | required | 1–200 nodes. |
 | `groups` | list | `[]` | One level of visual containers; detailed style only. |
-| `edges` | list | `[]` | Up to 500. |
+| `edges` | list | `[]` | Up to 500; not used by architecture-simple. |
+| `networks` | list | `[]` | Logical networks; architecture-simple only. |
 | `animation` | map | subtle draw | See animation below. |
 
 ## Node fields
@@ -234,16 +279,18 @@ diagram is off-screen.
 
 Diagrams are rendered inside a fixed-height SVG canvas with a toolbar:
 
-- **Start/Pause/Disable**: visible toolbar buttons for starting, freezing, or
-  disabling animation. Disable hides packets and trails and settles draw/pulse
-  effects at their completed state; the active state is highlighted.
+- **Animation menu**: one animation button. Hover, focus, or click it to choose
+  **Start**, **Pause**, or **Disable**. Disable hides packets and trails and
+  settles draw/pulse effects at their completed state; the active option is
+  highlighted.
 - **Speed**: hover or focus the speed value for a slider with 0.25×, 0.5×, 1×,
   1.5×, and 2× stops.
 - **Direction**: hover, focus, or click the arrow for clickable **Forward**,
   **Reverse**, and **Alternating** (default) options.
 - **Zoom**: mouse wheel over the canvas, buttons, `+`/`-`, or pinch.
-  Architecture diagrams start static, so the animation controls are hidden while
-  pan/zoom, selection, dragging, reset, and PNG remain available.
+  Static diagrams hide only the animation controls; pan/zoom, selection, reset,
+  and PNG remain available. Logical architecture diagrams keep pan/zoom and PNG
+  but do not allow node dragging.
 - **Pan**: right-drag on desktop, drag empty canvas space on touch, or use the
   arrow keys when the canvas is focused.
 - **Select**: left-drag an empty area to draw a selection box around nodes.

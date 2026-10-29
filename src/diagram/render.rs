@@ -18,13 +18,15 @@ pub fn render(layout: &DiagramLayout, standalone: bool) -> Result<String> {
         .iter()
         .all(|edge| edge.animation == EdgeAnimation::None);
     let data_attrs = format!(
-        r#"data-dg-draw-ms="{}" data-dg-flow-ms="{}" data-dg-stagger-ms="{}" data-dg-direction="{}" data-dg-autoplay="{}" data-dg-static="{}""#,
+        r#"data-dg-draw-ms="{}" data-dg-flow-ms="{}" data-dg-stagger-ms="{}" data-dg-direction="{}" data-dg-autoplay="{}" data-dg-static="{}" data-dg-no-drag="{}" data-dg-fit-mobile="{}""#,
         layout.draw_ms,
         layout.flow_ms,
         layout.stagger_ms,
         layout.direction.as_str(),
         layout.autoplay,
-        static_diagram
+        static_diagram,
+        layout.no_drag,
+        layout.fit_mobile
     );
     let style_vars = format!(
         "--dg-draw-duration:{}ms;--dg-flow-duration:{}ms;--dg-pulse-duration:2000ms",
@@ -83,6 +85,32 @@ pub fn render(layout: &DiagramLayout, standalone: bool) -> Result<String> {
         svg.push_str(r#"<g class="dg-groups">"#);
         for group in &layout.groups {
             render_group(&mut svg, group);
+        }
+        svg.push_str("</g>");
+    }
+
+    if !layout.networks.is_empty() {
+        svg.push_str(r#"<g class="dg-network-legend">"#);
+        for (index, network) in layout.networks.iter().enumerate() {
+            let y = layout.padding + 10.0 + index as f64 * 16.0;
+            write!(
+                svg,
+                r#"<line class="network-legend-swatch dg-tone-{}" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"/><text class="network-legend-label dg-tone-{}" x="{:.1}" y="{:.1}">{}</text>"#,
+                escape_attr(&network.tone),
+                layout.padding,
+                y,
+                layout.padding + 18.0,
+                y,
+                escape_attr(&network.tone),
+                layout.padding + 26.0,
+                y + 3.0,
+                escape_xml(&network.label)
+            )?;
+        }
+        svg.push_str("</g>");
+        svg.push_str(r#"<g class="dg-networks">"#);
+        for network in &layout.networks {
+            render_network(&mut svg, layout, network)?;
         }
         svg.push_str("</g>");
     }
@@ -455,6 +483,42 @@ fn render_architecture_port(svg: &mut String, port: &LayoutPort) {
     .expect("writing to String cannot fail");
 }
 
+fn render_network(
+    svg: &mut String,
+    layout: &DiagramLayout,
+    network: &crate::diagram::layout::LayoutNetwork,
+) -> Result<()> {
+    write!(
+        svg,
+        r#"<line class="network-rail dg-tone-{}" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"/>"#,
+        escape_attr(&network.tone),
+        network.x,
+        network.y1,
+        network.x,
+        network.y2
+    )?;
+    for member in &network.members {
+        if let Some(node) = layout.nodes.iter().find(|node| &node.id == member) {
+            let y = node.rect.center().y;
+            let (x1, x2) = if network.left {
+                (node.rect.x, network.x)
+            } else {
+                (network.x, node.rect.right())
+            };
+            write!(
+                svg,
+                r#"<line class="network-stub dg-tone-{}" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"/>"#,
+                escape_attr(&network.tone),
+                x1,
+                y,
+                x2,
+                y
+            )?;
+        }
+    }
+    Ok(())
+}
+
 fn style_class(style: EdgeStyle) -> &'static str {
     match style {
         EdgeStyle::Solid => "solid",
@@ -523,6 +587,11 @@ const STANDALONE_CSS: &str = r#"
 .arch-port.is-used{fill:var(--dg-tone);stroke:var(--dg-tone)}
 .arch-port-label{fill:var(--dg-muted);font-size:4.8px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .arch-port-label.is-used{fill:var(--dg-bg);font-weight:700}
+.network-rail{fill:none;stroke:var(--dg-tone);stroke-width:3;stroke-linecap:round}
+.network-stub{fill:none;stroke:var(--dg-tone);stroke-width:1.4;stroke-opacity:.8}
+.network-label{fill:var(--dg-tone);font-size:9px;font-weight:650;letter-spacing:.12em;text-transform:uppercase;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.network-legend-swatch{stroke:var(--dg-tone);stroke-width:3;stroke-linecap:round}
+.network-legend-label{fill:var(--dg-tone);font-size:9px;font-weight:650;letter-spacing:.1em;text-transform:uppercase;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .dg-edge{fill:none;stroke:var(--dg-tone);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
 .dg-edge--draw{stroke-dasharray:1;stroke-dashoffset:1;animation:dg-draw var(--dg-draw-duration,1200ms) ease forwards;animation-delay:var(--dg-delay,0ms)}
 .dg-style-dashed{stroke-dasharray:.025 .018}

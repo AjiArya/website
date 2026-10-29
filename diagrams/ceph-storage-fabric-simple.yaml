@@ -1,0 +1,76 @@
+version: 1
+style: architecture-simple
+title: Ceph logical networks
+description: The Ceph public network connects clients, monitors, and OSDs; the cluster network carries monitor and OSD replication traffic.
+direction: TB
+padding: 40
+
+nodes:
+  - id: client
+    kind: generic
+    label: Clients
+    icon: user
+    tone: blue
+  - id: mon1
+    kind: server
+    label: ceph-mon-01
+    icon: ceph
+    tone: violet
+  - id: mon2
+    kind: server
+    label: ceph-mon-02
+    icon: ceph
+    tone: violet
+  - id: mon3
+    kind: server
+    label: ceph-mon-03
+    icon: ceph
+    tone: violet
+  - id: osd1
+    kind: server
+    label: ceph-osd-01
+    icon: ceph
+    tone: amber
+  - id: osd2
+    kind: server
+    label: ceph-osd-02
+    icon: ceph
+    tone: amber
+  - id: osd3
+    kind: server
+    label: ceph-osd-03
+    icon: ceph
+    tone: amber
+
+networks:
+  - id: public
+    label: Public network
+    tone: blue
+    members:
+      - client
+      - mon1
+      - mon2
+      - mon3
+      - osd1
+      - osd2
+      - osd3
+  - id: cluster
+    label: Cluster network
+    tone: amber
+    members:
+      - mon1
+      - mon2
+      - mon3
+      - osd1
+      - osd2
+      - osd3
+
+animation:
+  preset: subtle
+  draw: false
+  flow: false
+  draw_ms: 1200
+  flow_ms: 2600
+  stagger_ms: 0
+  direction: alternate
+  autoplay: false

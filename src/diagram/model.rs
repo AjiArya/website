@@ -24,17 +24,22 @@ pub struct Diagram {
     #[serde(default)]
     pub edges: Vec<Edge>,
     #[serde(default)]
+    pub networks: Vec<Network>,
+    #[serde(default)]
     pub animation: Animation,
     #[serde(default)]
     pub style: DiagramStyle,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Default, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
 pub enum DiagramStyle {
     #[default]
+    #[serde(rename = "detailed")]
     Detailed,
-    Architecture,
+    #[serde(rename = "architecture-detailed", alias = "architecture")]
+    ArchitectureDetailed,
+    #[serde(rename = "architecture-simple")]
+    ArchitectureSimple,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Default, PartialEq, Eq)]
@@ -114,6 +119,16 @@ pub struct Node {
     pub port_columns: Option<usize>,
     #[serde(default)]
     pub nics: Vec<Nic>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Network {
+    pub id: String,
+    pub label: String,
+    #[serde(default)]
+    pub tone: Option<String>,
+    pub members: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -342,7 +357,10 @@ impl Diagram {
         if self.animation.stagger_ms > 2_000 {
             errors.push("animation.stagger_ms must be at most 2000".to_string());
         }
-        if self.style == DiagramStyle::Architecture {
+        if matches!(
+            self.style,
+            DiagramStyle::ArchitectureDetailed | DiagramStyle::ArchitectureSimple
+        ) {
             if self.layout == LayoutMode::Manual {
                 errors.push("architecture diagrams currently require layout: auto".to_string());
             }
@@ -350,8 +368,13 @@ impl Diagram {
                 errors.push("architecture diagrams currently require direction: TB".to_string());
             }
             if !self.groups.is_empty() {
-                errors.push("groups are not supported in architecture style".to_string());
+                errors.push("groups are not supported in architecture styles".to_string());
             }
+        }
+        if self.style == DiagramStyle::ArchitectureSimple && !self.edges.is_empty() {
+            errors.push(
+                "architecture-simple uses networks, not edges; remove the edges list".to_string(),
+            );
         }
 
         let mut node_ids = std::collections::HashSet::new();
@@ -397,6 +420,13 @@ impl Diagram {
                 {
                     errors.push(format!(
                         "node {:?} uses architecture-only fields but style is detailed",
+                        node.id
+                    ));
+                }
+            } else if self.style == DiagramStyle::ArchitectureSimple {
+                if node.ports.is_some() || node.port_columns.is_some() || !node.nics.is_empty() {
+                    errors.push(format!(
+                        "node {:?} uses physical port fields; use architecture-detailed instead",
                         node.id
                     ));
                 }
@@ -546,6 +576,68 @@ impl Diagram {
             }
         }
 
+        let mut network_ids = std::collections::HashSet::new();
+        for network in &self.networks {
+            if !valid_id(&network.id) {
+                errors.push(format!(
+                    "network id {:?} must use only letters, numbers, '-' and '_' (max 64)",
+                    network.id
+                ));
+            }
+            if !network_ids.insert(network.id.as_str()) {
+                errors.push(format!("duplicate network id {:?}", network.id));
+            }
+            if network.label.trim().is_empty() {
+                errors.push(format!("network {:?} has an empty label", network.id));
+            }
+            if let Some(tone) = &network.tone
+                && !known_tone(tone)
+            {
+                errors.push(format!(
+                    "network {:?} has unknown tone {:?} (use one of: {})",
+                    network.id,
+                    tone,
+                    TONES.join(", ")
+                ));
+            }
+            if network.members.len() < 2 {
+                errors.push(format!(
+                    "network {:?} needs at least two members",
+                    network.id
+                ));
+            }
+            let mut member_ids = std::collections::HashSet::new();
+            for member in &network.members {
+                if !node_ids.contains(member.as_str()) {
+                    errors.push(format!(
+                        "network {:?} references unknown node {:?}",
+                        network.id, member
+                    ));
+                }
+                if !member_ids.insert(member.as_str()) {
+                    errors.push(format!(
+                        "network {:?} lists node {:?} more than once",
+                        network.id, member
+                    ));
+                }
+            }
+        }
+        if self.style != DiagramStyle::ArchitectureSimple && !self.networks.is_empty() {
+            errors.push("networks are only supported in architecture-simple".to_string());
+        }
+        if self.style == DiagramStyle::ArchitectureSimple && self.networks.is_empty() {
+            errors.push("architecture-simple needs at least one network".to_string());
+        }
+        if self.style == DiagramStyle::ArchitectureSimple
+            && self
+                .networks
+                .iter()
+                .any(|network| network.members.len() >= 2)
+            && self.nodes.len() > 40
+        {
+            errors.push("architecture-simple supports at most 40 nodes".to_string());
+        }
+
         for (index, edge) in self.edges.iter().enumerate() {
             if edge.from == edge.to {
                 errors.push(format!("edge #{} is a self-loop", index + 1));
@@ -575,6 +667,11 @@ impl Diagram {
                         index + 1
                     ));
                 }
+            } else if self.style == DiagramStyle::ArchitectureSimple {
+                errors.push(format!(
+                    "edge #{} is not allowed in architecture-simple; use networks",
+                    index + 1
+                ));
             } else {
                 let from_node = self.nodes.iter().find(|node| node.id == edge.from);
                 let to_node = self.nodes.iter().find(|node| node.id == edge.to);

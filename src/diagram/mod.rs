@@ -313,6 +313,37 @@ edges:
     }
 
     #[test]
+    fn architecture_simple_renders_network_rails() {
+        let yaml = r#"
+version: 1
+style: architecture-simple
+title: Logical networks
+direction: TB
+nodes:
+  - id: a
+    label: A
+  - id: b
+    label: B
+networks:
+  - id: public
+    label: Public network
+    tone: blue
+    members: [a, b]
+  - id: cluster
+    label: Cluster network
+    tone: amber
+    members: [a, b]
+"#;
+        let svg = render_yaml(yaml, "simple", false).unwrap();
+        assert!(svg.contains("network-rail"));
+        assert!(svg.contains("network-stub"));
+        assert!(svg.contains("network-legend-label"));
+        assert!(svg.contains(r#"data-dg-no-drag="true""#));
+        assert!(svg.contains(r#"data-dg-static="true""#));
+        assert!(!svg.contains("dg-edge "));
+    }
+
+    #[test]
     fn detailed_style_rejects_architecture_fields() {
         let yaml = r#"
 version: 1

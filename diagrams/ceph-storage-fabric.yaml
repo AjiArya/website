@@ -1,5 +1,5 @@
 version: 1
-style: architecture
+style: architecture-detailed
 title: Ceph storage fabric
 description: Three Ceph monitor hosts and three Ceph OSD hosts dual-homed to two leaf switches, with a bond across both NICs.
 direction: TB

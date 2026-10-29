@@ -6,10 +6,12 @@
   const DIRECTION_LABELS = { forward: "→", reverse: "←", alternate: "↔" };
   const DIRECTION_NAMES = { forward: "forward", reverse: "reverse", alternate: "alternating" };
   const TRAIL_SPECS = [
-    { opacity: 0.42, width: 3.0 },
-    { opacity: 0.26, width: 2.4 },
-    { opacity: 0.14, width: 1.8 },
-    { opacity: 0.07, width: 1.2 },
+    { opacity: 0.36, width: 5.0 },
+    { opacity: 0.3, width: 4.2 },
+    { opacity: 0.24, width: 3.4 },
+    { opacity: 0.18, width: 2.8 },
+    { opacity: 0.12, width: 2.2 },
+    { opacity: 0.06, width: 1.6 },
   ];
   const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
   const MOBILE = window.matchMedia("(max-width: 900px)");
@@ -80,6 +82,8 @@
     const initialDirection =
       normalizeDirection(svg.dataset.dgDirection) || "alternate";
     const autoplay = svg.dataset.dgAutoplay !== "false";
+    const noDrag = svg.dataset.dgNoDrag === "true";
+    const fitMobile = svg.dataset.dgFitMobile === "true";
 
     const state = {
       scale: 1,
@@ -95,6 +99,12 @@
       motionOff: false,
     };
 
+    const animationControl = figure.querySelector(
+      "[data-dg-animation-control]",
+    );
+    const animationButton = figure.querySelector("[data-dg-animation]");
+    const animationIcon = figure.querySelector("[data-dg-animation-icon]");
+    const animationLabel = figure.querySelector("[data-dg-animation-label]");
     const animationOptions = Array.from(
       figure.querySelectorAll("[data-dg-anim-action]"),
     );
@@ -205,6 +215,23 @@
       const tone = Array.from(packet.circle.classList).find((name) =>
         name.startsWith("dg-tone-"),
       );
+      const glow = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path",
+      );
+      glow.setAttribute(
+        "class",
+        `dg-packet-trail dg-packet-trail--glow${tone ? ` ${tone}` : ""}`,
+      );
+      glow.setAttribute("fill", "none");
+      glow.setAttribute("stroke-linecap", "round");
+      glow.setAttribute("stroke-linejoin", "round");
+      glow.style.strokeWidth = "9";
+      glow.style.opacity = "0";
+      glow.dataset.dgEdge = packet.circle.dataset.dgEdge || "";
+      group.insertBefore(glow, packet.circle);
+      packet.glow = glow;
+
       TRAIL_SPECS.forEach((spec, index) => {
         const trail = document.createElementNS(
           "http://www.w3.org/2000/svg",
@@ -340,7 +367,7 @@
       updateFitScale();
       const { w, h } = canvasSize();
 
-      if (MOBILE.matches) {
+      if (MOBILE.matches && !fitMobile) {
         // Never shrink below a legible label size on a phone. Start at the
         // top-left and let the reader pan from there.
         state.scale = Math.max(state.fitScale, MIN_LEGIBLE_SCALE);
@@ -364,13 +391,17 @@
     function updateHintText() {
       if (!hint) return;
       if (MOBILE.matches) {
-        hint.textContent = groups.length
-          ? "Drag to pan · Pinch to zoom · Drag a group to move it"
-          : "Drag to pan · Pinch to zoom · Drag a node to move it";
+        hint.textContent = noDrag
+          ? "Drag to pan · Pinch to zoom"
+          : groups.length
+            ? "Drag to pan · Pinch to zoom · Drag a group to move it"
+            : "Drag to pan · Pinch to zoom · Drag a node to move it";
       } else {
-        hint.textContent = `Left-drag to select · Shift adds · Right-drag to pan${
-          groups.length ? " · Drag a group" : ""
-        }`;
+        hint.textContent = noDrag
+          ? "Left-drag to select · Shift adds · Right-drag to pan"
+          : `Left-drag to select · Shift adds · Right-drag to pan${
+              groups.length ? " · Drag a group" : ""
+            }`;
       }
     }
 
@@ -871,18 +902,42 @@
         } else if (direction === "alternate") {
           movingForward = packet.phase < 0.5;
         }
-        const segment = Math.min(26, Math.max(8, length * 0.06)) / length;
-        const gap = Math.min(8, Math.max(3, length * 0.03)) / length;
+        const step = Math.min(12, Math.max(5, length * 0.025)) / length;
+        const trailSpan = step * (TRAIL_SPECS.length + 0.8);
+
+        let glowStart;
+        let glowEnd;
+        if (movingForward) {
+          glowEnd = progress;
+          glowStart = glowEnd - trailSpan;
+        } else {
+          glowStart = progress;
+          glowEnd = glowStart + trailSpan;
+        }
+        if (
+          !visible ||
+          !packet.glow ||
+          glowStart < 0 ||
+          glowEnd > 1
+        ) {
+          if (packet.glow) packet.glow.style.opacity = "0";
+        } else {
+          packet.glow.setAttribute(
+            "d",
+            trailSegment(packet.edge.path, length, glowStart, glowEnd),
+          );
+          packet.glow.style.opacity = "0.16";
+        }
 
         for (const trail of packet.trails) {
           let start;
           let end;
           if (movingForward) {
-            end = progress - trail.index * (segment + gap);
-            start = end - segment;
+            end = progress - trail.index * step;
+            start = end - step * 1.5;
           } else {
-            start = progress + trail.index * (segment + gap);
-            end = start + segment;
+            start = progress + trail.index * step;
+            end = start + step * 1.5;
           }
 
           if (!visible || start < 0 || end > 1) {
@@ -1041,11 +1096,33 @@
     }
 
     function updateAnimationButtons() {
-      const status = state.motionOff
-        ? "disable"
-        : state.userPaused
-          ? "pause"
-          : "play";
+      let status;
+      let statusName;
+      let icon;
+      let label;
+      if (state.motionOff) {
+        status = "disable";
+        statusName = "disabled";
+        icon = "■";
+        label = "Off";
+      } else if (state.userPaused) {
+        status = "pause";
+        statusName = "paused";
+        icon = "▶";
+        label = "Start";
+      } else {
+        status = "play";
+        statusName = "playing";
+        icon = "❚❚";
+        label = "Pause";
+      }
+      if (animationIcon) animationIcon.textContent = icon;
+      if (animationLabel) animationLabel.textContent = label;
+      animationButton?.setAttribute(
+        "aria-label",
+        `Animation ${statusName}. Open animation options.`,
+      );
+      animationButton?.setAttribute("title", "Animation options");
       animationOptions.forEach((option) => {
         const active = option.dataset.dgAnimAction === status;
         option.classList.toggle("is-active", active);
@@ -1771,13 +1848,27 @@
     }
 
     // Animation controls
+    animationButton?.addEventListener("click", () => {
+      speedControl?.classList.remove("is-open");
+      directionControl?.classList.remove("is-open");
+      animationControl?.classList.add("is-open");
+      window.requestAnimationFrame(() => animationOptions[0]?.focus());
+    });
+
     animationOptions.forEach((option) => {
-      option.addEventListener("click", () => {
+      option.addEventListener("click", (event) => {
         setAnimation(option.dataset.dgAnimAction);
+        animationControl?.classList.remove("is-open");
+        if (event.detail > 0) {
+          option.blur();
+        } else {
+          animationButton?.focus();
+        }
       });
     });
 
     speedButton?.addEventListener("click", () => {
+      animationControl?.classList.remove("is-open");
       directionControl?.classList.remove("is-open");
       speedControl?.classList.add("is-open");
       window.requestAnimationFrame(() => speedRange?.focus());
@@ -1796,6 +1887,7 @@
     });
 
     directionButton?.addEventListener("click", () => {
+      animationControl?.classList.remove("is-open");
       speedControl?.classList.remove("is-open");
       directionControl?.classList.add("is-open");
       window.requestAnimationFrame(() => directionOptions[0]?.focus());
@@ -1816,14 +1908,23 @@
       });
     });
 
+    animationControl?.addEventListener("mouseenter", () => {
+      speedControl?.classList.remove("is-open");
+      directionControl?.classList.remove("is-open");
+    });
     speedControl?.addEventListener("mouseenter", () => {
+      animationControl?.classList.remove("is-open");
       directionControl?.classList.remove("is-open");
     });
     directionControl?.addEventListener("mouseenter", () => {
+      animationControl?.classList.remove("is-open");
       speedControl?.classList.remove("is-open");
     });
 
     document.addEventListener("pointerdown", (event) => {
+      if (animationControl && !animationControl.contains(event.target)) {
+        animationControl.classList.remove("is-open");
+      }
       if (speedControl && !speedControl.contains(event.target)) {
         speedControl.classList.remove("is-open");
       }
@@ -1851,6 +1952,11 @@
       if (pointers.size === 1) {
         const left = !isMouse || event.button === 0;
         const nodeElement = left ? closestNode(event.target) : null;
+        if (nodeElement && noDrag) {
+          startPan(event);
+          event.preventDefault();
+          return;
+        }
         if (nodeElement && startNodeDrag(nodeElement, event)) {
           event.preventDefault();
           return;
