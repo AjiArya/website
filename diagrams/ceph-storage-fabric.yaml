@@ -113,17 +113,17 @@ edges:
   - from: mon1
     from_nic: nic2
     from_port: 1
-    to: leaf1
-    to_port: 2
-    bond: bond0
-  - from: mon1
-    from_nic: nic1
-    from_port: 2
     to: leaf2
     to_port: 1
-    bond: bond1
+    bond: bond0
   - from: mon1
     from_nic: nic2
+    from_port: 2
+    to: leaf1
+    to_port: 2
+    bond: bond1
+  - from: mon1
+    from_nic: nic1
     from_port: 2
     to: leaf2
     to_port: 2
@@ -138,17 +138,17 @@ edges:
   - from: mon2
     from_nic: nic2
     from_port: 1
-    to: leaf1
-    to_port: 4
-    bond: bond0
-  - from: mon2
-    from_nic: nic1
-    from_port: 2
     to: leaf2
     to_port: 3
-    bond: bond1
+    bond: bond0
   - from: mon2
     from_nic: nic2
+    from_port: 2
+    to: leaf1
+    to_port: 4
+    bond: bond1
+  - from: mon2
+    from_nic: nic1
     from_port: 2
     to: leaf2
     to_port: 4
@@ -163,17 +163,17 @@ edges:
   - from: mon3
     from_nic: nic2
     from_port: 1
-    to: leaf1
-    to_port: 6
-    bond: bond0
-  - from: mon3
-    from_nic: nic1
-    from_port: 2
     to: leaf2
     to_port: 5
-    bond: bond1
+    bond: bond0
   - from: mon3
     from_nic: nic2
+    from_port: 2
+    to: leaf1
+    to_port: 6
+    bond: bond1
+  - from: mon3
+    from_nic: nic1
     from_port: 2
     to: leaf2
     to_port: 6
@@ -188,17 +188,17 @@ edges:
   - from: osd1
     from_nic: nic2
     from_port: 1
-    to: leaf1
-    to_port: 8
-    bond: bond0
-  - from: osd1
-    from_nic: nic1
-    from_port: 2
     to: leaf2
     to_port: 7
-    bond: bond1
+    bond: bond0
   - from: osd1
     from_nic: nic2
+    from_port: 2
+    to: leaf1
+    to_port: 8
+    bond: bond1
+  - from: osd1
+    from_nic: nic1
     from_port: 2
     to: leaf2
     to_port: 8
@@ -213,17 +213,17 @@ edges:
   - from: osd2
     from_nic: nic2
     from_port: 1
-    to: leaf1
-    to_port: 10
-    bond: bond0
-  - from: osd2
-    from_nic: nic1
-    from_port: 2
     to: leaf2
     to_port: 9
-    bond: bond1
+    bond: bond0
   - from: osd2
     from_nic: nic2
+    from_port: 2
+    to: leaf1
+    to_port: 10
+    bond: bond1
+  - from: osd2
+    from_nic: nic1
     from_port: 2
     to: leaf2
     to_port: 10
@@ -238,17 +238,17 @@ edges:
   - from: osd3
     from_nic: nic2
     from_port: 1
-    to: leaf1
-    to_port: 12
-    bond: bond0
-  - from: osd3
-    from_nic: nic1
-    from_port: 2
     to: leaf2
     to_port: 11
-    bond: bond1
+    bond: bond0
   - from: osd3
     from_nic: nic2
+    from_port: 2
+    to: leaf1
+    to_port: 12
+    bond: bond1
+  - from: osd3
+    from_nic: nic1
     from_port: 2
     to: leaf2
     to_port: 12

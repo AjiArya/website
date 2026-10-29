@@ -188,6 +188,16 @@
       if (edges[index]) edges[index].label = label;
     });
 
+    const bonds = Array.from(
+      svg.querySelectorAll(".dg-bond-mark, .dg-bond-label"),
+    );
+    const networkLegendItems = Array.from(
+      svg.querySelectorAll(".network-legend-item"),
+    );
+    const networkGraphics = Array.from(
+      svg.querySelectorAll(".network-rail, .network-stub"),
+    );
+
     const packets = Array.from(svg.querySelectorAll(".dg-packet"))
       .map((circle) => {
         const edge = edges[number(circle.dataset.dgEdge, -1)];
@@ -1595,29 +1605,10 @@
       }
     }
 
-    function closestNode(element) {
+    function closestWithClass(element, className) {
       let current = element;
       while (current && current !== canvas) {
-        if (
-          current.classList &&
-          current.classList.contains("dg-node")
-        ) {
-          return current;
-        }
-        current = current.parentNode;
-      }
-      return null;
-    }
-
-    function closestGroup(element) {
-      let current = element;
-      while (current && current !== canvas) {
-        if (
-          current.classList &&
-          current.classList.contains("dg-group")
-        ) {
-          return current;
-        }
+        if (current.classList?.contains(className)) return current;
         current = current.parentNode;
       }
       return null;
@@ -1826,6 +1817,9 @@
       for (const edge of edges) {
         edge.path.classList.remove("is-highlighted");
       }
+      for (const bond of bonds) {
+        bond.classList.remove("is-highlighted");
+      }
     };
 
     for (const node of nodes) {
@@ -1838,22 +1832,73 @@
             edge.from === node.id || edge.to === node.id,
           );
         }
+        for (const bond of bonds) {
+          bond.classList.toggle("is-highlighted", bond.dataset.node === node.id);
+        }
       });
       node.element.addEventListener("pointerleave", clearEdgeHighlight);
     }
 
+    const clearNetworkHighlight = () => {
+      svg.classList.remove("is-highlighting-network");
+      for (const element of [...networkLegendItems, ...networkGraphics]) {
+        element.classList.remove("is-highlighted");
+      }
+    };
+
+    for (const item of networkLegendItems) {
+      item.addEventListener("mouseenter", () => {
+        const id = item.dataset.dgNetwork;
+        svg.classList.add("is-highlighting-network");
+        for (const element of [...networkLegendItems, ...networkGraphics]) {
+          element.classList.toggle(
+            "is-highlighted",
+            element.dataset.dgNetwork === id,
+          );
+        }
+      });
+      item.addEventListener("mouseleave", clearNetworkHighlight);
+    }
+
     // Animation controls
+    const popovers = [
+      [animationControl, animationButton],
+      [speedControl, speedButton],
+      [directionControl, directionButton],
+    ];
+
+    function closePopovers(except = null) {
+      for (const [control, button] of popovers) {
+        const open = control === except;
+        control?.classList.toggle("is-open", open);
+        button?.setAttribute("aria-expanded", String(open));
+      }
+    }
+
+    function closeOtherPopovers(control) {
+      for (const [candidate, button] of popovers) {
+        if (candidate === control) continue;
+        candidate?.classList.remove("is-open");
+        button?.setAttribute("aria-expanded", "false");
+      }
+    }
+
+    function togglePopover(control) {
+      const open = !control?.classList.contains("is-open");
+      closePopovers(open ? control : null);
+      return open;
+    }
+
     animationButton?.addEventListener("click", () => {
-      speedControl?.classList.remove("is-open");
-      directionControl?.classList.remove("is-open");
-      animationControl?.classList.add("is-open");
-      window.requestAnimationFrame(() => animationOptions[0]?.focus());
+      if (togglePopover(animationControl)) {
+        window.requestAnimationFrame(() => animationOptions[0]?.focus());
+      }
     });
 
     animationOptions.forEach((option) => {
       option.addEventListener("click", (event) => {
         setAnimation(option.dataset.dgAnimAction);
-        animationControl?.classList.remove("is-open");
+        closePopovers();
         if (event.detail > 0) {
           option.blur();
         } else {
@@ -1863,10 +1908,9 @@
     });
 
     speedButton?.addEventListener("click", () => {
-      animationControl?.classList.remove("is-open");
-      directionControl?.classList.remove("is-open");
-      speedControl?.classList.add("is-open");
-      window.requestAnimationFrame(() => speedRange?.focus());
+      if (togglePopover(speedControl)) {
+        window.requestAnimationFrame(() => speedRange?.focus());
+      }
     });
 
     speedRange?.addEventListener("input", () => {
@@ -1882,10 +1926,9 @@
     });
 
     directionButton?.addEventListener("click", () => {
-      animationControl?.classList.remove("is-open");
-      speedControl?.classList.remove("is-open");
-      directionControl?.classList.add("is-open");
-      window.requestAnimationFrame(() => directionOptions[0]?.focus());
+      if (togglePopover(directionControl)) {
+        window.requestAnimationFrame(() => directionOptions[0]?.focus());
+      }
     });
 
     directionOptions.forEach((option) => {
@@ -1894,7 +1937,7 @@
         updateDirectionLabel();
         updateAnimations();
         positionPackets();
-        directionControl?.classList.remove("is-open");
+        closePopovers();
         if (event.detail > 0) {
           option.blur();
         } else {
@@ -1903,29 +1946,35 @@
       });
     });
 
-    animationControl?.addEventListener("mouseenter", () => {
-      speedControl?.classList.remove("is-open");
-      directionControl?.classList.remove("is-open");
-    });
-    speedControl?.addEventListener("mouseenter", () => {
-      animationControl?.classList.remove("is-open");
-      directionControl?.classList.remove("is-open");
-    });
-    directionControl?.addEventListener("mouseenter", () => {
-      animationControl?.classList.remove("is-open");
-      speedControl?.classList.remove("is-open");
-    });
+    animationControl?.addEventListener("mouseenter", () =>
+      closeOtherPopovers(animationControl),
+    );
+    speedControl?.addEventListener("mouseenter", () =>
+      closeOtherPopovers(speedControl),
+    );
+    directionControl?.addEventListener("mouseenter", () =>
+      closeOtherPopovers(directionControl),
+    );
 
     document.addEventListener("pointerdown", (event) => {
-      if (animationControl && !animationControl.contains(event.target)) {
-        animationControl.classList.remove("is-open");
+      if (
+        !event.target.closest?.(
+          "[data-dg-animation-control], [data-dg-speed-control], [data-dg-direction-control]",
+        )
+      ) {
+        closePopovers();
       }
-      if (speedControl && !speedControl.contains(event.target)) {
-        speedControl.classList.remove("is-open");
-      }
-      if (directionControl && !directionControl.contains(event.target)) {
-        directionControl.classList.remove("is-open");
-      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      const open = popovers.find(([control]) =>
+        control?.classList.contains("is-open"),
+      );
+      if (!open) return;
+      closePopovers();
+      open[1]?.focus();
+      event.stopPropagation();
     });
 
     // View controls
@@ -1946,7 +1995,7 @@
 
       if (pointers.size === 1) {
         const left = !isMouse || event.button === 0;
-        const nodeElement = left ? closestNode(event.target) : null;
+        const nodeElement = left ? closestWithClass(event.target, "dg-node") : null;
         if (nodeElement && noDrag) {
           startPan(event);
           event.preventDefault();
@@ -1957,7 +2006,7 @@
           return;
         }
 
-        const groupElement = left ? closestGroup(event.target) : null;
+        const groupElement = left ? closestWithClass(event.target, "dg-group") : null;
         if (groupElement && startGroupDrag(groupElement, event)) {
           event.preventDefault();
           return;

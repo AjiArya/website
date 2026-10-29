@@ -4,16 +4,16 @@
   <div class="diagram__toolbar" data-dg-toolbar role="toolbar" aria-label="Diagram controls" hidden>
     <div class="diagram__controls" role="group" aria-label="Animation" data-dg-animation-group>
       <div class="diagram__popover" data-dg-animation-control>
-        <button class="diagram__button" type="button" data-dg-animation aria-label="Animation: playing" title="Animation options" aria-haspopup="true"><span class="diagram__icon" data-dg-animation-icon aria-hidden="true">❚❚</span><span class="diagram__button-label" data-dg-animation-label>Pause</span></button>
-        <div class="diagram__popover-panel diagram__options-panel" data-dg-animation-panel>
+        <button class="diagram__button" type="button" data-dg-animation aria-label="Animation: playing" title="Animation options" aria-haspopup="true" aria-expanded="false" aria-controls="dg-{{ name }}-animation-panel"><span class="diagram__icon" data-dg-animation-icon aria-hidden="true">❚❚</span><span class="diagram__button-label" data-dg-animation-label>Pause</span></button>
+        <div class="diagram__popover-panel diagram__options-panel" data-dg-animation-panel id="dg-{{ name }}-animation-panel">
           <button class="diagram__option" type="button" data-dg-anim-action="play"><span class="diagram__option-icon" aria-hidden="true">▶</span><span>Start</span></button>
           <button class="diagram__option" type="button" data-dg-anim-action="pause"><span class="diagram__option-icon" aria-hidden="true">❚❚</span><span>Pause</span></button>
           <button class="diagram__option" type="button" data-dg-anim-action="disable"><span class="diagram__option-icon" aria-hidden="true">■</span><span>Disable</span></button>
         </div>
       </div>
       <div class="diagram__popover" data-dg-speed-control>
-        <button class="diagram__button diagram__button--value" type="button" data-dg-speed aria-label="Animation speed: 1x" title="Animation speed" aria-haspopup="true">1×</button>
-        <div class="diagram__popover-panel" data-dg-speed-panel>
+        <button class="diagram__button diagram__button--value" type="button" data-dg-speed aria-label="Animation speed: 1x" title="Animation speed" aria-haspopup="true" aria-expanded="false" aria-controls="dg-{{ name }}-speed-panel">1×</button>
+        <div class="diagram__popover-panel" data-dg-speed-panel id="dg-{{ name }}-speed-panel">
           <input class="diagram__range" type="range" min="0" max="4" step="1" value="2" data-dg-speed-range aria-label="Animation speed">
           <div class="diagram__ticks" aria-hidden="true">
             <span data-dg-speed-tick>0.25×</span>
@@ -25,8 +25,8 @@
         </div>
       </div>
       <div class="diagram__popover diagram__popover--end" data-dg-direction-control>
-        <button class="diagram__button diagram__button--value diagram__button--direction" type="button" data-dg-direction aria-label="Animation direction: alternating" title="Animation direction" aria-haspopup="true">↔</button>
-        <div class="diagram__popover-panel diagram__options-panel" data-dg-direction-panel>
+        <button class="diagram__button diagram__button--value diagram__button--direction" type="button" data-dg-direction aria-label="Animation direction: alternating" title="Animation direction" aria-haspopup="true" aria-expanded="false" aria-controls="dg-{{ name }}-direction-panel">↔</button>
+        <div class="diagram__popover-panel diagram__options-panel" data-dg-direction-panel id="dg-{{ name }}-direction-panel">
           <button class="diagram__option" type="button" data-dg-direction-option="forward"><span class="diagram__option-icon" aria-hidden="true">→</span><span>Forward</span></button>
           <button class="diagram__option" type="button" data-dg-direction-option="reverse"><span class="diagram__option-icon" aria-hidden="true">←</span><span>Reverse</span></button>
           <button class="diagram__option" type="button" data-dg-direction-option="alternate"><span class="diagram__option-icon" aria-hidden="true">↔</span><span>Alternating</span></button>

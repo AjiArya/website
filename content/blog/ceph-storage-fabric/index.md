@@ -18,7 +18,7 @@ The logical view is deliberately simpler: it shows which hosts participate in th
 
 The physical view below expands that into NICs, ports, leaf switches, and individual links.
 
-{{<diagram name="ceph-storage-fabric" caption="Three MON hosts and three OSD hosts, each with two dual-port NICs, dual-homed to two leaf switches. bond0 uses one port from each NIC to leaf-01; bond1 uses the other port from each NIC to leaf-02." />}}
+{{<diagram name="ceph-storage-fabric" caption="Three MON hosts and three OSD hosts, each with two dual-port NICs, dual-homed to two leaf switches. bond0 and bond1 are MLAG bonds; each one has a member on leaf-01 and leaf-02." />}}
 
 ## The topology
 
@@ -30,18 +30,18 @@ Six physical hosts sit below a pair of 48-port leaf switches. Each host has two 
 
 That gives every host four independent paths to the fabric, arranged as two two-member bonds:
 
-- **bond0** = `nic1/p1` + `nic2/p1` → `leaf-01`
-- **bond1** = `nic1/p2` + `nic2/p2` → `leaf-02`
+- **bond0** = `nic1/p1` → `leaf-01` + `nic2/p1` → `leaf-02`
+- **bond1** = `nic2/p2` → `leaf-01` + `nic1/p2` → `leaf-02`
 
-Each bond draws one member from each NIC, so a failed NIC or cable does not remove the bond entirely. Keeping bond0 and bond1 on different leaf switches means a single leaf failure also leaves one bond alive. The dashed rings and matching colors in the physical diagram mark the two bond groups.
+Each bond has one member on each NIC and one member on each leaf. A failed NIC, cable, or leaf removes one member from each bond, not a whole bond. The dashed badges and matching colors in the physical diagram mark the two bond groups.
 
-The leaves do not need to act as a single LAG endpoint unless you want one bond spanning both switches. Here, each bond terminates on one leaf, and the host can balance across the two bonds at layer 3 or with multipath policy.
+The leaf pair must be configured as an MLAG (or a stacked pair) so both switches present one logical LAG endpoint. Without that, the two bond members on different leaves would not form a single LAG.
 
 ## Logical networks
 
 The public network is the client-facing path: clients reach RGW/MON services and the OSDs accept front-end traffic. The cluster network is the private back-end used by OSDs for heartbeat, object replication, and recovery. Ceph Monitors always operate on the public network, so the dedicated MON hosts are shown only on the public rail.
 
-An OSD host is normally on both networks. In the logical diagram, the two colored rails show that membership directly; in the physical diagram, the same host has separate NICs and ports for each path.
+An OSD host is normally on both networks. In the logical diagram, the two colored rails show that membership directly; hovering a legend entry highlights that network's rail and stubs. In the physical diagram, the same host has separate NICs and ports for each path.
 
 ## Reading the port grid
 
@@ -51,10 +51,10 @@ On a host, the two NIC blocks show the port-level wiring directly:
 
 - `nic1/1` → `leaf-01`
 - `nic1/2` → `leaf-02`
-- `nic2/1` → `leaf-01`
-- `nic2/2` → `leaf-02`
+- `nic2/1` → `leaf-02`
+- `nic2/2` → `leaf-01`
 
-Port cells and links are colored by bond: bond0 is blue, bond1 is amber. Each colored pair is enclosed by a dashed ring labeled `bond0` or `bond1`, so the bond grouping is visible without hiding the individual NIC/port mapping. The NIC labels still identify `nic1` and `nic2`; the port numbers identify the member port. Hovering any host highlights its four links and dims the rest; the diagram is also pan/zoomable for detail.
+Port cells and links are colored by bond: bond0 is blue, bond1 is amber. Each bond gets a dashed badge below its host, labeled `bond0` or `bond1`, so the bond grouping is visible without hiding the individual NIC/port mapping. The NIC labels still identify `nic1` and `nic2`; the port numbers identify the member port. Hovering any host highlights its four links and both bond badges, and dims the rest; the diagram is also pan/zoomable for detail.
 
 ## What I check first
 

@@ -114,9 +114,10 @@ Architecture rules:
 - Architecture edges are solid, unanimated port-to-port links. Switch ports in
   use are highlighted and take the bond or link tone.
 - Optional `bond` groups edges with the same bond on the same source host. Bond
-  members share a color and get a dashed ring marker labeled with the bond name.
-- Hovering a node highlights its incident links and dims the rest, which makes a
-  dense fabric traceable without zooming.
+  members share a color and get a dashed badge below the host, labeled with the
+  bond name.
+- Hovering a node highlights its incident links and bond markers and dims the
+  rest, which makes a dense fabric traceable without zooming.
 - `groups` and manual layout are not supported in architecture styles.
 
 ### Architecture simple style
@@ -154,9 +155,9 @@ Logical diagrams use `networks` instead of `edges`. Each network has a label,
 optional tone, and a member list. The first network is drawn as the top rail,
 the second as the bottom rail, and additional networks alternate outward. Nodes
 are arranged in a horizontal row between the rails, with a legend in the
-top-left. Bond links use the host tone, while server port cells keep their NIC
-tones. Node dragging is disabled in this style because the rails are fixed; pan,
-zoom, fit, reset, and PNG remain.
+top-left. Hovering a legend entry highlights that network's rail and stubs.
+Server port cells keep their NIC tones. Node dragging is disabled in this style
+because the rails are fixed; pan, zoom, fit, reset, and PNG remain.
 
 Architecture-simple rules:
 
@@ -289,8 +290,8 @@ Diagrams are rendered inside a fixed-height SVG canvas with a toolbar:
 
 - **Animation menu**: one animation button. Hover, focus, or click it to choose
   **Start**, **Pause**, or **Disable**. Disable hides packets and trails and
-  settles draw/pulse effects at their completed state; the active option is
-  highlighted.
+  settles draw/pulse effects at their completed state. The trigger shows the
+  current state; Escape closes the menu and returns focus to the trigger.
 - **Speed**: hover or focus the speed value for a slider with 0.25×, 0.5×, 1×,
   1.5×, and 2× stops.
 - **Direction**: hover, focus, or click the arrow for clickable **Forward**,

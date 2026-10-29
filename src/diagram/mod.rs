@@ -312,6 +312,8 @@ edges:
         assert!(svg.contains("is-used"));
         assert!(svg.contains(r#"data-dg-static="true""#));
         assert_eq!(svg.matches("dg-edge ").count(), 2);
+        assert!(svg.contains(r#"data-dg-bond="bond0""#));
+        assert!(svg.contains(r#"data-node="host""#));
     }
 
     #[test]
@@ -340,6 +342,8 @@ networks:
         assert!(svg.contains("network-rail"));
         assert!(svg.contains("network-stub"));
         assert!(svg.contains("network-legend-label"));
+        assert!(svg.contains("network-legend-item"));
+        assert!(svg.contains(r#"data-dg-network="public""#));
         assert!(svg.contains(r#"data-dg-no-drag="true""#));
         assert!(svg.contains(r#"data-dg-static="true""#));
         assert!(!svg.contains("dg-edge "));

@@ -99,6 +99,7 @@ pub struct LayoutArchitecture {
 
 #[derive(Debug, Clone)]
 pub struct LayoutBond {
+    pub node: String,
     pub label: String,
     pub tone: String,
     pub x: f64,
@@ -109,6 +110,7 @@ pub struct LayoutBond {
 
 #[derive(Debug, Clone)]
 pub struct LayoutNetwork {
+    pub id: String,
     pub label: String,
     pub tone: String,
     pub x1: f64,
@@ -338,6 +340,7 @@ fn simple_positions(diagram: &Diagram, nodes: &mut [LayoutNode]) -> (f64, f64, V
         let x1 = member_x.first().copied().unwrap_or(padding);
         let x2 = member_x.last().copied().unwrap_or(width - padding);
         networks.push(LayoutNetwork {
+            id: network.id.clone(),
             label: network.label.clone(),
             tone: network
                 .tone
@@ -1348,43 +1351,43 @@ fn route_architecture_edges(
         }
     }
     let mut bonds = Vec::with_capacity(bond_groups.len());
-    for ((_from, bond), members) in bond_groups {
-        let source_max = members
+    for ((from, bond), members) in bond_groups {
+        let from_index = node_index[from.as_str()];
+        let host = nodes[from_index].rect;
+        let source_x = members
             .iter()
             .map(|&index| starts[index].unwrap().x)
-            .fold(f64::NEG_INFINITY, f64::max);
-        let target_avg = members
-            .iter()
-            .map(|&index| ends[index].unwrap().x)
             .sum::<f64>()
             / members.len() as f64;
-        let direction = if target_avg >= source_max { 1.0 } else { -1.0 };
-        let x = if (target_avg - source_max).abs() > 80.0 {
-            source_max + direction * 28.0
-        } else {
-            (source_max + target_avg) / 2.0
-        };
-        let min_lane = members
-            .iter()
-            .map(|&index| lane_y[index])
-            .fold(f64::INFINITY, f64::min);
-        let max_lane = members
-            .iter()
-            .map(|&index| lane_y[index])
-            .fold(f64::NEG_INFINITY, f64::max);
         let tone = bond_tones
             .get(bond.as_str())
             .copied()
             .unwrap_or("neutral")
             .to_string();
         bonds.push(LayoutBond {
+            node: from,
             label: bond,
             tone,
-            x,
-            y: (min_lane + max_lane) / 2.0,
-            rx: 18.0,
-            ry: (max_lane - min_lane) / 2.0 + 10.0,
+            x: source_x,
+            y: host.bottom() + 18.0,
+            rx: 22.0,
+            ry: 10.0,
         });
+    }
+
+    bonds.sort_by(|a, b| a.node.cmp(&b.node).then_with(|| a.label.cmp(&b.label)));
+    let mut start = 0;
+    while start < bonds.len() {
+        let mut end = start + 1;
+        while end < bonds.len() && bonds[end].node == bonds[start].node {
+            end += 1;
+        }
+        let count = end - start;
+        for (position, bond) in bonds[start..end].iter_mut().enumerate() {
+            let offset = (position as f64 - (count.saturating_sub(1) as f64 / 2.0)) * 48.0;
+            bond.x += offset;
+        }
+        start = end;
     }
 
     let mut result = Vec::with_capacity(diagram.edges.len());
@@ -1404,14 +1407,7 @@ fn route_architecture_edges(
             points.push(Point { x: end.x, y: lane });
         }
         points.push(end);
-        let mut path = String::new();
-        for (point_index, point) in points.iter().enumerate() {
-            if point_index == 0 {
-                path.push_str(&format!("M {:.1} {:.1}", point.x, point.y));
-            } else {
-                path.push_str(&format!(" L {:.1} {:.1}", point.x, point.y));
-            }
-        }
+        let (path, _) = router::path_from_points(&points);
 
         result.push(LayoutEdge {
             from: edge.from.clone(),
@@ -1615,10 +1611,7 @@ fn route(from: Rect, to: Rect, route: Route) -> (String, Point) {
     };
 
     let path = match route {
-        Route::Straight => format!(
-            "M {:.1} {:.1} L {:.1} {:.1}",
-            start.x, start.y, end.x, end.y
-        ),
+        Route::Straight => router::path_from_points(&[start, end]).0,
         Route::Curve => {
             let dx = end.x - start.x;
             let dy = end.y - start.y;
@@ -1670,46 +1663,7 @@ fn route(from: Rect, to: Rect, route: Route) -> (String, Point) {
             )
         }
         Route::Elbow => {
-            let points = if start_side.is_horizontal() && end_side.is_horizontal() {
-                let mid = (start.x + end.x) / 2.0;
-                vec![
-                    start,
-                    Point { x: mid, y: start.y },
-                    Point { x: mid, y: end.y },
-                    end,
-                ]
-            } else if !start_side.is_horizontal() && !end_side.is_horizontal() {
-                let mid = (start.y + end.y) / 2.0;
-                vec![
-                    start,
-                    Point { x: start.x, y: mid },
-                    Point { x: end.x, y: mid },
-                    end,
-                ]
-            } else if start_side.is_horizontal() {
-                vec![
-                    start,
-                    Point {
-                        x: end.x,
-                        y: start.y,
-                    },
-                    end,
-                ]
-            } else {
-                vec![
-                    start,
-                    Point {
-                        x: start.x,
-                        y: end.y,
-                    },
-                    end,
-                ]
-            };
-            let mut path = format!("M {:.1} {:.1}", points[0].x, points[0].y);
-            for point in &points[1..] {
-                path.push_str(&format!(" L {:.1} {:.1}", point.x, point.y));
-            }
-            path
+            router::path_from_points(&simple_elbow_points(start, start_side, end, end_side, 0.0)).0
         }
     };
 

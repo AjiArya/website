@@ -157,7 +157,7 @@
 .arch-node-meta {
   fill: var(--dg-muted);
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.04em;
 }
 
@@ -203,6 +203,7 @@
   stroke: var(--dg-tone);
   stroke-width: 3;
   stroke-linecap: round;
+  transition: opacity 120ms ease, stroke-width 120ms ease;
 }
 
 .network-stub {
@@ -210,6 +211,42 @@
   stroke: var(--dg-tone);
   stroke-width: 1.4;
   stroke-opacity: 0.8;
+  transition: opacity 120ms ease;
+}
+
+.network-legend-item {
+  transition: opacity 120ms ease;
+}
+
+.network-legend-hit {
+  fill: transparent;
+}
+
+.dg-svg.is-highlighting-network .network-rail,
+.dg-svg.is-highlighting-network .network-stub,
+.dg-svg.is-highlighting-network .network-legend-item {
+  opacity: 0.18;
+}
+
+.dg-svg.is-highlighting-network .network-rail.is-highlighted,
+.dg-svg.is-highlighting-network .network-stub.is-highlighted,
+.dg-svg.is-highlighting-network .network-legend-item.is-highlighted {
+  opacity: 1;
+}
+
+.dg-svg.is-highlighting-network .network-rail.is-highlighted {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 4px var(--dg-tone));
+}
+
+.dg-svg.is-highlighting-network .network-stub.is-highlighted {
+  stroke-opacity: 1;
+  filter: drop-shadow(0 0 3px var(--dg-tone));
+}
+
+.dg-svg.is-highlighting-network .network-legend-item.is-highlighted .network-legend-swatch,
+.dg-svg.is-highlighting-network .network-legend-item.is-highlighted .network-legend-label {
+  filter: drop-shadow(0 0 4px var(--dg-tone));
 }
 
 .network-legend-swatch {
@@ -221,7 +258,7 @@
 .network-legend-label {
   fill: var(--dg-tone);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 650;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -232,14 +269,26 @@
   stroke: var(--dg-tone);
   stroke-width: 1.2;
   stroke-dasharray: 3 3;
+  transition: opacity 120ms ease;
 }
 
 .dg-bond-label {
   fill: var(--dg-tone);
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 650;
   letter-spacing: 0.04em;
+  transition: opacity 120ms ease;
+}
+
+.dg-svg.is-highlighting .dg-bond-mark,
+.dg-svg.is-highlighting .dg-bond-label {
+  opacity: 0.12;
+}
+
+.dg-svg.is-highlighting .dg-bond-mark.is-highlighted,
+.dg-svg.is-highlighting .dg-bond-label.is-highlighted {
+  opacity: 1;
 }
 
 .dg-packet {
@@ -374,7 +423,7 @@
   background: transparent;
   color: var(--ink-soft);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.03em;
   line-height: 1;
@@ -427,7 +476,7 @@
   min-width: 52px;
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.03em;
   text-align: center;
 }
@@ -484,7 +533,7 @@
   background: transparent;
   color: var(--ink-soft);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-align: left;
@@ -497,6 +546,11 @@
   background: color-mix(in srgb, var(--accent) 7%, transparent);
   color: var(--accent);
   outline: none;
+}
+
+.diagram__option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .diagram__option.is-active {
@@ -536,7 +590,7 @@
   margin-top: 2px;
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.02em;
 }
 
@@ -596,7 +650,7 @@
   border-top: 1px solid var(--rule);
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   line-height: 1.5;
 }
@@ -626,7 +680,7 @@
 
   .diagram__zoom-label {
     min-width: 46px;
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .diagram__popover-panel {
@@ -657,7 +711,7 @@
   }
 
   .diagram__ticks {
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .diagram__canvas {
@@ -666,7 +720,7 @@
   }
 
   .diagram__hint {
-    font-size: 8px;
+    font-size: 10px;
   }
 }
 
@@ -710,6 +764,17 @@
   opacity: 0.55;
 }
 
+@media (pointer: coarse) {
+  .diagram__button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .diagram__option {
+    min-height: 44px;
+  }
+}
+
 @media (max-width: 360px) {
   .diagram__controls {
     gap: 0;
@@ -725,7 +790,7 @@
   padding: 0 12px 12px;
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.5;
 }
 

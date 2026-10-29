@@ -93,9 +93,14 @@ pub fn render(layout: &DiagramLayout, standalone: bool) -> Result<String> {
         svg.push_str(r#"<g class="dg-network-legend">"#);
         for (index, network) in layout.networks.iter().enumerate() {
             let y = layout.padding + 10.0 + index as f64 * 16.0;
+            let hit_width = (network.label.chars().count() as f64 * 6.0 + 42.0).max(96.0);
             write!(
                 svg,
-                r#"<line class="network-legend-swatch dg-tone-{}" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"/><text class="network-legend-label dg-tone-{}" x="{:.1}" y="{:.1}">{}</text>"#,
+                r#"<g class="network-legend-item" data-dg-network="{}"><rect class="network-legend-hit" x="{:.1}" y="{:.1}" width="{:.1}" height="16"/><line class="network-legend-swatch dg-tone-{}" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"/><text class="network-legend-label dg-tone-{}" x="{:.1}" y="{:.1}">{}</text></g>"#,
+                escape_attr(&network.id),
+                layout.padding - 4.0,
+                y - 10.0,
+                hit_width,
                 escape_attr(&network.tone),
                 layout.padding,
                 y,
@@ -126,15 +131,19 @@ pub fn render(layout: &DiagramLayout, standalone: bool) -> Result<String> {
         for bond in &layout.bonds {
             write!(
                 svg,
-                r#"<ellipse class="dg-bond-mark dg-tone-{}" cx="{:.1}" cy="{:.1}" rx="{:.1}" ry="{:.1}"/><text class="dg-bond-label dg-tone-{}" x="{:.1}" y="{:.1}" text-anchor="middle">{}</text>"#,
+                r#"<ellipse class="dg-bond-mark dg-tone-{}" data-node="{}" data-dg-bond="{}" cx="{:.1}" cy="{:.1}" rx="{:.1}" ry="{:.1}"/><text class="dg-bond-label dg-tone-{}" data-node="{}" data-dg-bond="{}" x="{:.1}" y="{:.1}" text-anchor="middle" dominant-baseline="middle">{}</text>"#,
                 escape_attr(&bond.tone),
+                escape_attr(&bond.node),
+                escape_attr(&bond.label),
                 bond.x,
                 bond.y,
                 bond.rx,
                 bond.ry,
                 escape_attr(&bond.tone),
+                escape_attr(&bond.node),
+                escape_attr(&bond.label),
                 bond.x,
-                bond.y - bond.ry - 5.0,
+                bond.y,
                 escape_xml(&bond.label)
             )?;
         }
@@ -510,8 +519,9 @@ fn render_network(
 ) -> Result<()> {
     write!(
         svg,
-        r#"<line class="network-rail dg-tone-{}" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"/>"#,
+        r#"<line class="network-rail dg-tone-{}" data-dg-network="{}" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"/>"#,
         escape_attr(&network.tone),
+        escape_attr(&network.id),
         network.x1,
         network.y1,
         network.x2,
@@ -543,8 +553,9 @@ fn render_network(
             };
             write!(
                 svg,
-                r#"<line class="network-stub dg-tone-{}" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"/>"#,
+                r#"<line class="network-stub dg-tone-{}" data-dg-network="{}" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"/>"#,
                 escape_attr(&network.tone),
+                escape_attr(&network.id),
                 x1,
                 y1,
                 x2,
@@ -616,7 +627,7 @@ const STANDALONE_CSS: &str = r#"
 .dg-node-icon{fill:none;stroke:var(--dg-tone);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .dg-node--vm .dg-node-box{stroke-dasharray:4 3}
 .arch-node-title{fill:var(--dg-text);font-size:11px;font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-.arch-node-meta{fill:var(--dg-muted);font-size:7px;letter-spacing:.04em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.arch-node-meta{fill:var(--dg-muted);font-size:8px;letter-spacing:.04em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .arch-nic{fill:rgba(127,145,130,.10);stroke:var(--dg-tone);stroke-width:.8;stroke-opacity:.55}
 .arch-nic-label{fill:var(--dg-tone);font-size:6.5px;font-weight:650;letter-spacing:.04em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .arch-port{fill:var(--dg-bg);stroke:#2c3a30;stroke-width:.7}
@@ -626,10 +637,10 @@ const STANDALONE_CSS: &str = r#"
 .network-rail{fill:none;stroke:var(--dg-tone);stroke-width:3;stroke-linecap:round}
 .network-stub{fill:none;stroke:var(--dg-tone);stroke-width:1.4;stroke-opacity:.8}
 .network-label{fill:var(--dg-tone);font-size:9px;font-weight:650;letter-spacing:.12em;text-transform:uppercase;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-.network-legend-swatch{stroke:var(--dg-tone);stroke-width:3;stroke-linecap:round}
-.network-legend-label{fill:var(--dg-tone);font-size:9px;font-weight:650;letter-spacing:.1em;text-transform:uppercase;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.network-legend-hit{fill:transparent}.network-legend-swatch{stroke:var(--dg-tone);stroke-width:3;stroke-linecap:round}
+.network-legend-label{fill:var(--dg-tone);font-size:10px;font-weight:650;letter-spacing:.1em;text-transform:uppercase;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .dg-bond-mark{fill:color-mix(in srgb,var(--dg-tone) 7%,transparent);stroke:var(--dg-tone);stroke-width:1.2;stroke-dasharray:3 3}
-.dg-bond-label{fill:var(--dg-tone);font-size:7px;font-weight:650;letter-spacing:.04em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.dg-bond-label{fill:var(--dg-tone);font-size:8px;font-weight:650;letter-spacing:.04em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .dg-edge{fill:none;stroke:var(--dg-tone);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
 .dg-edge--draw{stroke-dasharray:1;stroke-dashoffset:1;animation:dg-draw var(--dg-draw-duration,1200ms) ease forwards;animation-delay:var(--dg-delay,0ms)}
 .dg-style-dashed{stroke-dasharray:.025 .018}
