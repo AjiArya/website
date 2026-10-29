@@ -11,6 +11,10 @@ use crate::diagram::router;
 
 type ArchitectureGroup = ((String, String), Vec<usize>);
 
+const BOND_TONES: [&str; 8] = [
+    "blue", "amber", "violet", "green", "cyan", "pink", "red", "neutral",
+];
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Rect {
     pub x: f64,
@@ -94,6 +98,16 @@ pub struct LayoutArchitecture {
 }
 
 #[derive(Debug, Clone)]
+pub struct LayoutBond {
+    pub label: String,
+    pub tone: String,
+    pub x: f64,
+    pub y: f64,
+    pub rx: f64,
+    pub ry: f64,
+}
+
+#[derive(Debug, Clone)]
 pub struct LayoutNetwork {
     pub label: String,
     pub tone: String,
@@ -139,6 +153,7 @@ pub struct DiagramLayout {
     pub nodes: Vec<LayoutNode>,
     pub groups: Vec<LayoutGroup>,
     pub edges: Vec<LayoutEdge>,
+    pub bonds: Vec<LayoutBond>,
     pub networks: Vec<LayoutNetwork>,
     pub no_drag: bool,
     pub fit_mobile: bool,
@@ -224,12 +239,12 @@ pub fn layout(diagram: &Diagram, prefix: &str) -> Result<DiagramLayout> {
         height = size.1;
     }
 
-    let edges = if architecture_detailed {
+    let (edges, bonds) = if architecture_detailed {
         route_architecture_edges(diagram, &mut nodes)
     } else if architecture_simple {
-        Vec::new()
+        (Vec::new(), Vec::new())
     } else {
-        route_edges(diagram, &nodes, &groups)
+        (route_edges(diagram, &nodes, &groups), Vec::new())
     };
 
     Ok(DiagramLayout {
@@ -244,6 +259,7 @@ pub fn layout(diagram: &Diagram, prefix: &str) -> Result<DiagramLayout> {
         nodes,
         groups,
         edges,
+        bonds,
         networks,
         no_drag: architecture_simple,
         fit_mobile: architecture_detailed || architecture_simple,
@@ -1151,12 +1167,28 @@ fn architecture_port_index(node: &LayoutNode, key: &str) -> Option<usize> {
         .position(|port| port.key == key)
 }
 
-fn route_architecture_edges(diagram: &Diagram, nodes: &mut [LayoutNode]) -> Vec<LayoutEdge> {
+fn route_architecture_edges(
+    diagram: &Diagram,
+    nodes: &mut [LayoutNode],
+) -> (Vec<LayoutEdge>, Vec<LayoutBond>) {
     let node_index: HashMap<&str, usize> = diagram
         .nodes
         .iter()
         .enumerate()
         .map(|(index, node)| (node.id.as_str(), index))
+        .collect();
+
+    let mut bond_names: Vec<&str> = diagram
+        .edges
+        .iter()
+        .filter_map(|edge| edge.bond.as_deref())
+        .collect();
+    bond_names.sort_unstable();
+    bond_names.dedup();
+    let bond_tones: HashMap<&str, &str> = bond_names
+        .iter()
+        .enumerate()
+        .map(|(index, bond)| (*bond, BOND_TONES[index % BOND_TONES.len()]))
         .collect();
 
     let mut starts: Vec<Option<Point>> = vec![None; diagram.edges.len()];
@@ -1178,11 +1210,12 @@ fn route_architecture_edges(diagram: &Diagram, nodes: &mut [LayoutNode]) -> Vec<
             .as_deref()
             .and_then(|key| architecture_port_index(&nodes[to_index], key));
 
-        // All members of a host bond share the host's tone. NIC tones stay on
-        // the NIC port grids so the physical NICs remain distinguishable.
         let tone = edge
-            .tone
-            .clone()
+            .bond
+            .as_deref()
+            .and_then(|bond| bond_tones.get(bond).copied())
+            .map(str::to_string)
+            .or_else(|| edge.tone.clone())
             .unwrap_or_else(|| nodes[from_index].tone.clone());
 
         if let Some(port_index) = from_port_index {
@@ -1190,7 +1223,11 @@ fn route_architecture_edges(diagram: &Diagram, nodes: &mut [LayoutNode]) -> Vec<
                 .rect
                 .center();
             starts[index] = Some(center);
-            nodes[from_index].arch.as_mut().unwrap().ports[port_index].used = true;
+            let port = &mut nodes[from_index].arch.as_mut().unwrap().ports[port_index];
+            port.used = true;
+            if edge.bond.is_some() {
+                port.tone = tone.clone();
+            }
         }
         if let Some(port_index) = to_port_index {
             let center = nodes[to_index].arch.as_ref().unwrap().ports[port_index]
@@ -1299,6 +1336,57 @@ fn route_architecture_edges(diagram: &Diagram, nodes: &mut [LayoutNode]) -> Vec<
         }
     }
 
+    let mut bond_groups: HashMap<(String, String), Vec<usize>> = HashMap::new();
+    for (index, edge) in diagram.edges.iter().enumerate() {
+        if let Some(bond) = &edge.bond {
+            if starts[index].is_some() && ends[index].is_some() {
+                bond_groups
+                    .entry((edge.from.clone(), bond.clone()))
+                    .or_default()
+                    .push(index);
+            }
+        }
+    }
+    let mut bonds = Vec::with_capacity(bond_groups.len());
+    for ((_from, bond), members) in bond_groups {
+        let source_max = members
+            .iter()
+            .map(|&index| starts[index].unwrap().x)
+            .fold(f64::NEG_INFINITY, f64::max);
+        let target_avg = members
+            .iter()
+            .map(|&index| ends[index].unwrap().x)
+            .sum::<f64>()
+            / members.len() as f64;
+        let direction = if target_avg >= source_max { 1.0 } else { -1.0 };
+        let x = if (target_avg - source_max).abs() > 80.0 {
+            source_max + direction * 28.0
+        } else {
+            (source_max + target_avg) / 2.0
+        };
+        let min_lane = members
+            .iter()
+            .map(|&index| lane_y[index])
+            .fold(f64::INFINITY, f64::min);
+        let max_lane = members
+            .iter()
+            .map(|&index| lane_y[index])
+            .fold(f64::NEG_INFINITY, f64::max);
+        let tone = bond_tones
+            .get(bond.as_str())
+            .copied()
+            .unwrap_or("neutral")
+            .to_string();
+        bonds.push(LayoutBond {
+            label: bond,
+            tone,
+            x,
+            y: (min_lane + max_lane) / 2.0,
+            rx: 18.0,
+            ry: (max_lane - min_lane) / 2.0 + 10.0,
+        });
+    }
+
     let mut result = Vec::with_capacity(diagram.edges.len());
     for (index, edge) in diagram.edges.iter().enumerate() {
         let from_index = node_index[edge.from.as_str()];
@@ -1344,7 +1432,7 @@ fn route_architecture_edges(diagram: &Diagram, nodes: &mut [LayoutNode]) -> Vec<
         });
     }
 
-    result
+    (result, bonds)
 }
 
 fn simple_elbow_points(

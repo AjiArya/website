@@ -296,11 +296,13 @@ edges:
     from_port: 1
     to: leaf
     to_port: 1
+    bond: bond0
   - from: host
     from_nic: nic2
     from_port: 1
     to: leaf
     to_port: 2
+    bond: bond0
 "#;
         let svg = render_yaml(yaml, "arch", false).unwrap();
         assert!(svg.contains(r#"data-dg-kind="switch""#));

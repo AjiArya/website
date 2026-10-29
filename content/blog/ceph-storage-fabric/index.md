@@ -12,13 +12,13 @@ demo = true
 +++
 A Ceph cluster is only as reliable as the fabric underneath it. The monitor quorum needs low, predictable latency, and the OSDs need enough independent paths that losing a NIC, a cable, or a leaf switch does not turn into a storage outage.
 
-The logical view is deliberately simpler: it shows which hosts participate in the Ceph public network and which participate in the cluster network.
+The logical view is deliberately simpler: it shows which hosts participate in the Ceph public network and which participate in the cluster network. Monitors stay on the public network; OSDs use both.
 
-{{<diagram name="ceph-storage-fabric-simple" caption="Ceph logical networks: the public network connects clients, monitors, and OSDs, while the cluster network carries MON and OSD traffic." />}}
+{{<diagram name="ceph-storage-fabric-simple" caption="Ceph logical networks: the public network connects clients, monitors, and OSDs, while the cluster network carries OSD replication and recovery traffic." />}}
 
 The physical view below expands that into NICs, ports, leaf switches, and individual links.
 
-{{<diagram name="ceph-storage-fabric" caption="Three MON hosts and three OSD hosts, each with two dual-port NICs, dual-homed to two leaf switches. The bond crosses NICs and leafs." />}}
+{{<diagram name="ceph-storage-fabric" caption="Three MON hosts and three OSD hosts, each with two dual-port NICs, dual-homed to two leaf switches. bond0 uses one port from each NIC to leaf-01; bond1 uses the other port from each NIC to leaf-02." />}}
 
 ## The topology
 
@@ -28,15 +28,20 @@ Six physical hosts sit below a pair of 48-port leaf switches. Each host has two 
 - **NIC 2** has two ports.
 - Every port is connected: one port from each NIC goes to `leaf-01`, and one port from each NIC goes to `leaf-02`.
 
-That gives every host four independent paths to the fabric. The useful redundancy comes from the fact that the members of the bond come from different NICs and land on different leaf switches. A single failed NIC or cable cannot take the host off the network, and a single leaf failure still leaves half of the bond alive.
+That gives every host four independent paths to the fabric, arranged as two two-member bonds:
 
-For a single bond to span both leaf switches, the leaves need to behave as one logical LAG endpoint — normally an MLAG or a stacked pair. Without that, use separate bonds per leaf and let multipath routing handle failover at layer 3.
+- **bond0** = `nic1/p1` + `nic2/p1` → `leaf-01`
+- **bond1** = `nic1/p2` + `nic2/p2` → `leaf-02`
+
+Each bond draws one member from each NIC, so a failed NIC or cable does not remove the bond entirely. Keeping bond0 and bond1 on different leaf switches means a single leaf failure also leaves one bond alive. The dashed rings and matching colors in the physical diagram mark the two bond groups.
+
+The leaves do not need to act as a single LAG endpoint unless you want one bond spanning both switches. Here, each bond terminates on one leaf, and the host can balance across the two bonds at layer 3 or with multipath policy.
 
 ## Logical networks
 
-The public network is the client-facing path: clients reach RGW/MON services and the OSDs accept front-end traffic. The cluster network is the private back-end for monitor and OSD replication and heartbeat traffic. Keeping them separate makes it easier to reason about latency and failure isolation, especially during recovery.
+The public network is the client-facing path: clients reach RGW/MON services and the OSDs accept front-end traffic. The cluster network is the private back-end used by OSDs for heartbeat, object replication, and recovery. Ceph Monitors always operate on the public network, so the dedicated MON hosts are shown only on the public rail.
 
-A host can be on both networks. In the logical diagram, the two colored rails show that membership directly; in the physical diagram, the same host has separate NICs and ports for each path.
+An OSD host is normally on both networks. In the logical diagram, the two colored rails show that membership directly; in the physical diagram, the same host has separate NICs and ports for each path.
 
 ## Reading the port grid
 
@@ -49,7 +54,7 @@ On a host, the two NIC blocks show the port-level wiring directly:
 - `nic2/1` → `leaf-01`
 - `nic2/2` → `leaf-02`
 
-The blue and amber port cells distinguish the two NICs. All four links for a host share the host’s bond color, so the redundant bond reads as one unit on the fabric side; the leaf port numbers make the same mapping visible from the switch side. Hovering any host highlights its four links and dims the rest; the diagram is also pan/zoomable for detail.
+Port cells and links are colored by bond: bond0 is blue, bond1 is amber. Each colored pair is enclosed by a dashed ring labeled `bond0` or `bond1`, so the bond grouping is visible without hiding the individual NIC/port mapping. The NIC labels still identify `nic1` and `nic2`; the port numbers identify the member port. Hovering any host highlights its four links and dims the rest; the diagram is also pan/zoomable for detail.
 
 ## What I check first
 

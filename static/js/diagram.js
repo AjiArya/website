@@ -1096,25 +1096,21 @@
     }
 
     function updateAnimationButtons() {
-      let status;
       let statusName;
       let icon;
       let label;
       if (state.motionOff) {
-        status = "disable";
         statusName = "disabled";
         icon = "■";
         label = "Off";
       } else if (state.userPaused) {
-        status = "pause";
         statusName = "paused";
-        icon = "▶";
-        label = "Start";
-      } else {
-        status = "play";
-        statusName = "playing";
         icon = "❚❚";
-        label = "Pause";
+        label = "Paused";
+      } else {
+        statusName = "playing";
+        icon = "▶";
+        label = "Playing";
       }
       if (animationIcon) animationIcon.textContent = icon;
       if (animationLabel) animationLabel.textContent = label;
@@ -1124,9 +1120,8 @@
       );
       animationButton?.setAttribute("title", "Animation options");
       animationOptions.forEach((option) => {
-        const active = option.dataset.dgAnimAction === status;
-        option.classList.toggle("is-active", active);
-        option.setAttribute("aria-pressed", String(active));
+        option.classList.remove("is-active");
+        option.removeAttribute("aria-pressed");
       });
     }
 

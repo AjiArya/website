@@ -121,6 +121,26 @@ pub fn render(layout: &DiagramLayout, standalone: bool) -> Result<String> {
     }
     svg.push_str("</g>");
 
+    if !layout.bonds.is_empty() {
+        svg.push_str(r#"<g class="dg-bonds">"#);
+        for bond in &layout.bonds {
+            write!(
+                svg,
+                r#"<ellipse class="dg-bond-mark dg-tone-{}" cx="{:.1}" cy="{:.1}" rx="{:.1}" ry="{:.1}"/><text class="dg-bond-label dg-tone-{}" x="{:.1}" y="{:.1}" text-anchor="middle">{}</text>"#,
+                escape_attr(&bond.tone),
+                bond.x,
+                bond.y,
+                bond.rx,
+                bond.ry,
+                escape_attr(&bond.tone),
+                bond.x,
+                bond.y - bond.ry - 5.0,
+                escape_xml(&bond.label)
+            )?;
+        }
+        svg.push_str("</g>");
+    }
+
     if !standalone {
         let packets: Vec<(usize, &LayoutEdge)> = layout
             .edges
@@ -608,6 +628,8 @@ const STANDALONE_CSS: &str = r#"
 .network-label{fill:var(--dg-tone);font-size:9px;font-weight:650;letter-spacing:.12em;text-transform:uppercase;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .network-legend-swatch{stroke:var(--dg-tone);stroke-width:3;stroke-linecap:round}
 .network-legend-label{fill:var(--dg-tone);font-size:9px;font-weight:650;letter-spacing:.1em;text-transform:uppercase;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.dg-bond-mark{fill:color-mix(in srgb,var(--dg-tone) 7%,transparent);stroke:var(--dg-tone);stroke-width:1.2;stroke-dasharray:3 3}
+.dg-bond-label{fill:var(--dg-tone);font-size:7px;font-weight:650;letter-spacing:.04em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .dg-edge{fill:none;stroke:var(--dg-tone);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
 .dg-edge--draw{stroke-dasharray:1;stroke-dashoffset:1;animation:dg-draw var(--dg-draw-duration,1200ms) ease forwards;animation-delay:var(--dg-delay,0ms)}
 .dg-style-dashed{stroke-dasharray:.025 .018}

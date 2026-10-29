@@ -58,9 +58,6 @@ networks:
     label: Cluster network
     tone: amber
     members:
-      - mon1
-      - mon2
-      - mon3
       - osd1
       - osd2
       - osd3

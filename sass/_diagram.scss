@@ -227,6 +227,21 @@
   text-transform: uppercase;
 }
 
+.dg-bond-mark {
+  fill: color-mix(in srgb, var(--dg-tone) 7%, transparent);
+  stroke: var(--dg-tone);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+}
+
+.dg-bond-label {
+  fill: var(--dg-tone);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+
 .dg-packet {
   fill: #eaffea;
   stroke: var(--dg-tone);

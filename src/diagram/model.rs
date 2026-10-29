@@ -247,6 +247,8 @@ pub struct Edge {
     pub to_nic: Option<String>,
     #[serde(default)]
     pub to_port: Option<usize>,
+    #[serde(default)]
+    pub bond: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -661,6 +663,7 @@ impl Diagram {
                     || edge.from_port.is_some()
                     || edge.to_nic.is_some()
                     || edge.to_port.is_some()
+                    || edge.bond.is_some()
                 {
                     errors.push(format!(
                         "edge #{} uses architecture port fields but style is detailed",
@@ -675,6 +678,16 @@ impl Diagram {
             } else {
                 let from_node = self.nodes.iter().find(|node| node.id == edge.from);
                 let to_node = self.nodes.iter().find(|node| node.id == edge.to);
+
+                if let Some(bond) = &edge.bond
+                    && !valid_id(bond)
+                {
+                    errors.push(format!(
+                        "edge #{} bond {:?} must use only letters, numbers, '-' and '_'",
+                        index + 1,
+                        bond
+                    ));
+                }
 
                 if edge.from_port.is_none() {
                     errors.push(format!(

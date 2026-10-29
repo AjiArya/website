@@ -112,7 +112,9 @@ Architecture rules:
 - Architecture style currently requires `direction: TB`, `layout: auto`, and no
   groups.
 - Architecture edges are solid, unanimated port-to-port links. Switch ports in
-  use are highlighted and take the tone of the connected NIC.
+  use are highlighted and take the bond or link tone.
+- Optional `bond` groups edges with the same bond on the same source host. Bond
+  members share a color and get a dashed ring marker labeled with the bond name.
 - Hovering a node highlights its incident links and dims the rest, which makes a
   dense fabric traceable without zooming.
 - `groups` and manual layout are not supported in architecture styles.
@@ -134,6 +136,9 @@ nodes:
   - id: osd1
     kind: server
     label: ceph-osd-01
+  - id: osd2
+    kind: server
+    label: ceph-osd-02
 networks:
   - id: public
     label: Public network
@@ -142,7 +147,7 @@ networks:
   - id: cluster
     label: Cluster network
     tone: amber
-    members: [mon1, osd1]
+    members: [osd1, osd2]
 ```
 
 Logical diagrams use `networks` instead of `edges`. Each network has a label,
@@ -246,6 +251,7 @@ edges:
     from_port: 1           # architecture style only
     to_nic: nic2           # architecture style only, for server targets
     to_port: 2             # architecture style only
+    bond: bond0            # architecture style optional bond grouping
 ```
 
 Edges connect to the nearest side of each node. Elbows use an orthogonal
