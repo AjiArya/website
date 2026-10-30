@@ -83,6 +83,12 @@
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
+  color: var(--dg-tone);
+}
+
+.dg-icon-filled {
+  fill: var(--dg-tone);
+  stroke: none;
 }
 
 .dg-edge {

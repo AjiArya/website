@@ -187,7 +187,7 @@ Architecture-simple rules:
 ```yaml
 - id: api                  # required; letters, numbers, - and _ only
   label: kube-apiserver    # required; use "\n" for an explicit line break
-  icon: kubernetes         # optional; see icon list
+  icon: kubernetes         # optional; Iconify name, see Icons
   tone: violet             # optional; default neutral
   shape: box               # box | pill
   group: control-plane     # optional group id
@@ -339,12 +339,30 @@ diagram follows the site's terminal theme automatically.
 
 ## Icons
 
-`api`, `bucket`, `ceph`, `cloud`, `cog`, `container`, `database`, `disk`,
-`gateway`, `globe`, `kubernetes`, `linux`, `loadbalancer`, `lock`, `monitor`,
-`network`, `openstack`, `queue`, `server`, `storage`, `user`, `vm`.
+Icons come from [Iconify](https://iconify.design/). Bare names resolve to
+Tabler first, then Simple Icons. Prefix with `tabler:` or `simple-icons:` to
+force a set.
 
-Icons are generic line glyphs embedded in the binary; no external icon requests
-are made. Unknown names fail validation with the available list.
+```yaml
+icon: server
+icon: brand-docker
+icon: simple-icons:ceph
+```
+
+Common aliases: `api`, `ceph`, `cog`, `container`, `database`, `disk`,
+`gateway`, `globe`, `kubernetes`, `monitor`, `server`, `storage`, `switch`,
+`user`, `vm`.
+
+Only icons referenced in `diagrams/*.yaml` plus the defaults are generated.
+After adding or changing an `icon:` value, regenerate the Rust map:
+
+```bash
+npm install
+npm run icons
+```
+
+The generator writes `src/diagram/icons_generated.rs`. The site build makes no
+external icon requests.
 
 ## Layout notes
 

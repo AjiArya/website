@@ -410,7 +410,7 @@ impl Diagram {
                 && !icons::exists(icon)
             {
                 errors.push(format!(
-                    "node {:?} has unknown icon {:?} (see docs/diagram-dsl.md)",
+                    "node {:?} has unknown icon {:?} (run `npm run icons`; see docs/diagram-dsl.md)",
                     node.id, icon
                 ));
             }

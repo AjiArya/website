@@ -624,7 +624,7 @@ const STANDALONE_CSS: &str = r#"
 .dg-node-box{fill:var(--dg-node-bg);stroke:var(--dg-node-border);stroke-width:1.2}
 .dg-node-accent{fill:var(--dg-tone)}
 .dg-node-label{fill:var(--dg-text);font-size:13px;font-weight:560;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-.dg-node-icon{fill:none;stroke:var(--dg-tone);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.dg-node-icon{fill:none;stroke:var(--dg-tone);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;color:var(--dg-tone)}.dg-icon-filled{fill:var(--dg-tone);stroke:none}
 .dg-node--vm .dg-node-box{stroke-dasharray:4 3}
 .arch-node-title{fill:var(--dg-text);font-size:11px;font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .arch-node-meta{fill:var(--dg-muted);font-size:8px;letter-spacing:.04em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}

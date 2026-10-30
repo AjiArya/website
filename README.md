@@ -110,6 +110,14 @@ contain a diagram.
 
 See [docs/diagram-dsl.md](docs/diagram-dsl.md) for the YAML schema.
 
+Diagram icons come from Iconify. After adding or changing an `icon:` value,
+regenerate the Rust icon map:
+
+```bash
+npm install
+npm run icons
+```
+
 ## Terminal navigation
 
 Press `/` anywhere outside a text field to open a terminal-style command
