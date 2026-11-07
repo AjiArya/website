@@ -1,16 +1,16 @@
 - title: Kubernetes
   icon: kubernetes
   index: "01"
-  description: "Cluster design, controllers, and the sharp edges of running stateful workloads."
+  description: "Container platforms that teams can ship onto without thinking about the cluster underneath."
 - title: OpenStack
   icon: openstack
   index: "02"
-  description: "Control planes, networking, upgrades, and the operational shape of private cloud."
+  description: "Private cloud control planes, run and upgraded with confidence instead of fear."
 - title: Ceph
   icon: ceph
   index: "03"
-  description: "Distributed storage that stays boring — placement, recovery, and failure domains."
+  description: "Software-defined storage with clear failure domains and a data path you can reason about."
 - title: Linux
   icon: linux
   index: "04"
-  description: "The substrate: performance, observability, packaging, and automation."
+  description: "The foundation under all of it: kernels, networking, and systems that stay legible."

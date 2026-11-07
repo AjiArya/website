@@ -1,0 +1,33 @@
+version: 1
+style: detailed
+title: Edge styles, routes and arrows
+description: Eight node pairs, each joined by an edge that shows a different line style, route, or arrow option. Route targets sit lower than their sources so the path shape is visible.
+layout: manual
+animation:
+  preset: none
+nodes:
+  - { id: solid, label: "style: solid", tone: blue, at: [40, 40] }
+  - { id: solid_to, label: target, tone: neutral, at: [400, 40] }
+  - { id: dashed, label: "style: dashed", tone: violet, at: [40, 110] }
+  - { id: dashed_to, label: target, tone: neutral, at: [400, 110] }
+  - { id: dotted, label: "style: dotted", tone: cyan, at: [40, 180] }
+  - { id: dotted_to, label: target, tone: neutral, at: [400, 180] }
+  - { id: elbow, label: "route: elbow", tone: green, at: [40, 270] }
+  - { id: elbow_to, label: target, tone: neutral, at: [400, 330] }
+  - { id: straight, label: "route: straight", tone: green, at: [40, 410] }
+  - { id: straight_to, label: target, tone: neutral, at: [400, 470] }
+  - { id: curve, label: "route: curve", tone: amber, at: [40, 550] }
+  - { id: curve_to, label: target, tone: neutral, at: [400, 610] }
+  - { id: both, label: "arrow: both", tone: red, at: [40, 700] }
+  - { id: both_to, label: target, tone: neutral, at: [400, 700] }
+  - { id: none, label: "arrow: none", tone: pink, at: [40, 770] }
+  - { id: none_to, label: target, tone: neutral, at: [400, 770] }
+edges:
+  - { from: solid, to: solid_to, style: solid }
+  - { from: dashed, to: dashed_to, style: dashed }
+  - { from: dotted, to: dotted_to, style: dotted }
+  - { from: elbow, to: elbow_to, route: elbow }
+  - { from: straight, to: straight_to, route: straight }
+  - { from: curve, to: curve_to, route: curve }
+  - { from: both, to: both_to, arrow: both }
+  - { from: none, to: none_to, arrow: none }

@@ -1,0 +1,7 @@
+# The About page hides the certifications section while this list is empty.
+# Entry format:
+# - name: Certification name
+#   issuer: Issuer
+#   year: "2026"
+#   url: https://example.com/credential
+[]

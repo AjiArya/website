@@ -9,6 +9,7 @@ tags = ["ceph", "storage", "architecture"]
 
 [extra]
 demo = true
+highlight = "simpler than its operations"
 +++
 Ceph can feel like a system with too many daemons. The data path, though, is remarkably direct: clients authenticate, receive a cluster map, and then talk to the OSDs that own the objects.
 

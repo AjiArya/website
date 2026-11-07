@@ -7,11 +7,10 @@
 .terminal-trigger {
   display: none;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 1px solid var(--rule);
-  border-radius: 3px;
   background: transparent;
   color: var(--ink-muted);
   font-family: var(--font-mono);
@@ -119,7 +118,6 @@ body.terminal-open {
   height: 34px;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 3px;
   background: transparent;
   color: var(--ink-muted);
   font-family: var(--font-mono);

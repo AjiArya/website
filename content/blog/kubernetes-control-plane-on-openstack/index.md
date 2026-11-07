@@ -9,6 +9,7 @@ tags = ["kubernetes", "openstack", "ceph", "architecture"]
 
 [extra]
 demo = true
+highlight = "as it actually runs"
 +++
 Most Kubernetes diagrams start at the API server. That is a reasonable place to start reading, but it is not where a request starts, and it is not where the interesting failures live.
 

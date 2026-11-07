@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
-<header class="page-head container">
-  <p class="eyebrow">Tag</p>
-  <h1>{{ term.name }}</h1>
-  <p class="page-head__lede">{{ term.pages | length }} post{% if term.pages | length != 1 %}s{% endif %} tagged “{{ term.name }}”.</p>
-</header>
+<div class="container stack stack--index">
+  <header class="page-head">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="{{ config.base_url }}/">~</a> / <a href="{{ config.base_url }}/tags/">tags</a> / <span aria-current="page">{{ term.name }}</span></nav>
+    <h1>#{{ term.name }}<span class="caret" aria-hidden="true">▋</span></h1>
+    <p class="page-head__lede">{{ term.pages | length }} post{% if term.pages | length != 1 %}s{% endif %} tagged “{{ term.name }}”.</p>
+  </header>
 
-<div class="container">
-  <div class="post-list post-list--archive">
+  <div class="post-list">
     {% for post in term.pages %}
       {% include "partials/post-card.html" %}
     {% endfor %}

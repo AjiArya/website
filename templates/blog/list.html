@@ -1,19 +1,46 @@
 {% extends "base.html" %}
 
 {% block content %}
-<header class="page-head container">
-  <p class="eyebrow">Writing</p>
-  <h1>{{ section.title }}</h1>
-  {% if section.description %}
-    <p class="page-head__lede">{{ section.description }}</p>
-  {% endif %}
-</header>
+{% set tags = get_taxonomy(kind="tags") %}
 
-<div class="container">
-  <div class="post-list post-list--archive">
-    {% for post in section.pages %}
-      {% include "partials/post-card.html" %}
-    {% endfor %}
-  </div>
+<div class="container stack stack--index">
+  <header class="page-head">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="{{ config.base_url }}/">~</a> / <span aria-current="page">writing</span></nav>
+    <h1>{{ section.title }}<span class="caret" aria-hidden="true">▋</span></h1>
+    {% if section.description %}
+      <p class="page-head__lede">{{ section.description }}</p>
+    {% endif %}
+  </header>
+
+  <section class="section" aria-label="Posts" data-post-filter style="gap: 24px">
+    <div class="filter-bar">
+      <span class="prompt"><span class="prompt__host">ajiarya@website</span>:~/writing$ ls --tag=<span data-filter-active>all</span> | sort -r</span>
+      <span class="prompt" data-filter-count aria-live="polite">{{ section.pages | length }} post{% if section.pages | length != 1 %}s{% endif %}</span>
+    </div>
+    <div class="filter-chips" role="group" aria-label="Filter by tag" data-filter-chips hidden>
+      <button class="filter-chip" type="button" data-filter-tag="all" aria-pressed="true">#all</button>
+      {% for term in tags.items %}
+        <button class="filter-chip" type="button" data-filter-tag="{{ term.name }}" aria-pressed="false">#{{ term.name }}</button>
+      {% endfor %}
+    </div>
+
+    <div class="post-list">
+      {% for post in section.pages %}
+        {% include "partials/post-card.html" %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="callout callout--row" aria-labelledby="subscribe-title">
+    <div class="callout__text">
+      <p class="eyebrow">Subscribe</p>
+      <h2 id="subscribe-title">New notes land in the feed first.</h2>
+      <p>No newsletter, no tracking. Just Atom and RSS.</p>
+    </div>
+    <div class="button-row">
+      <a class="button" href="{{ config.base_url }}/atom.xml">Subscribe via Atom</a>
+      <a class="button button--ghost" href="{{ config.base_url }}/rss.xml">RSS</a>
+    </div>
+  </section>
 </div>
 {% endblock content %}

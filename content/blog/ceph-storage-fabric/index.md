@@ -9,6 +9,7 @@ tags = ["ceph", "networking", "architecture"]
 
 [extra]
 demo = true
+highlight = "dual-leaf redundancy"
 +++
 A Ceph cluster is only as reliable as the fabric underneath it. The monitor quorum needs low, predictable latency, and the OSDs need enough independent paths that losing a NIC, a cable, or a leaf switch does not turn into a storage outage.
 

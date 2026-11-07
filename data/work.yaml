@@ -1,0 +1,16 @@
+- title: Private cloud architecture
+  slug: openstack
+  index: "01"
+  description: "OpenStack control planes, tenant networking, quotas and lifecycle management."
+- title: Distributed storage
+  slug: ceph
+  index: "02"
+  description: "Ceph placement groups, failure domains, recovery behaviour and production performance."
+- title: Kubernetes platforms
+  slug: kubernetes
+  index: "03"
+  description: "Cluster design, controllers, scheduling, storage integration and operations."
+- title: Linux and automation
+  slug: linux
+  index: "04"
+  description: "Performance investigation, observability, packaging, and small tools that remove repetitive work."

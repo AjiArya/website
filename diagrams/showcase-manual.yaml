@@ -1,0 +1,27 @@
+version: 1
+style: detailed
+title: Manual layout, tones, shapes and groups
+description: Eight nodes placed at explicit coordinates, one per colour tone, in two groups. The top row uses boxes and the bottom row uses pills.
+layout: manual
+animation:
+  preset: none
+nodes:
+  - { id: neutral, label: neutral, icon: cog, tone: neutral, group: boxes, at: [40, 60] }
+  - { id: blue, label: blue, icon: user, tone: blue, group: boxes, at: [240, 60] }
+  - { id: violet, label: violet, icon: kubernetes, tone: violet, group: boxes, at: [440, 60] }
+  - { id: green, label: green, icon: api, tone: green, group: boxes, at: [640, 60] }
+  - { id: amber, label: amber, icon: disk, tone: amber, shape: pill, group: pills, at: [40, 240] }
+  - { id: red, label: red, icon: monitor, tone: red, shape: pill, group: pills, at: [240, 240] }
+  - { id: cyan, label: cyan, icon: globe, tone: cyan, shape: pill, group: pills, at: [440, 240] }
+  - { id: pink, label: pink, icon: storage, tone: pink, shape: pill, group: pills, at: [640, 240] }
+groups:
+  - id: boxes
+    label: shape box
+    tone: blue
+  - id: pills
+    label: shape pill
+    tone: amber
+edges:
+  - { from: blue, to: red, route: straight }
+  - { from: violet, to: cyan, route: straight }
+  - { from: green, to: pink, route: straight }

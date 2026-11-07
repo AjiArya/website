@@ -1,0 +1,34 @@
+version: 1
+style: architecture-detailed
+title: Physical view with ports and bonds
+description: A server and a virtual machine, each with two NICs, connected port to port to a pair of switches through named bonds.
+direction: TB
+nodes:
+  - id: sw1
+    kind: switch
+    label: switch-01
+    ports: 24
+    port_columns: 12
+  - id: sw2
+    kind: switch
+    label: switch-02
+    ports: 24
+    port_columns: 12
+  - id: server
+    kind: server
+    label: server-01
+    nics:
+      - { id: nic1, ports: 2, tone: blue }
+      - { id: nic2, ports: 2, tone: amber }
+  - id: vm
+    kind: vm
+    label: vm-01
+    nics:
+      - { id: nic1, ports: 2, tone: green }
+edges:
+  - { from: server, from_nic: nic1, from_port: 1, to: sw1, to_port: 1, bond: bond0 }
+  - { from: server, from_nic: nic1, from_port: 2, to: sw2, to_port: 1, bond: bond0 }
+  - { from: server, from_nic: nic2, from_port: 1, to: sw1, to_port: 2, bond: bond1 }
+  - { from: server, from_nic: nic2, from_port: 2, to: sw2, to_port: 2, bond: bond1 }
+  - { from: vm, from_nic: nic1, from_port: 1, to: sw1, to_port: 3 }
+  - { from: vm, from_nic: nic1, from_port: 2, to: sw2, to_port: 3 }

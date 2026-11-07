@@ -1,19 +1,65 @@
-<footer class="site-footer">
-  <div class="container site-footer__inner">
-    <div class="site-footer__identity">
-      <p class="site-footer__name">{{ config.extra.author }}</p>
-      <p>{{ config.extra.role }} · {{ config.extra.experience }}</p>
+<footer class="site-footer" aria-labelledby="footer-title">
+  <div class="site-footer__art">
+    <img src="{{ get_url(path='images/footer-art.png', cachebust=true) }}" width="2880" height="1200" loading="lazy" decoding="async" alt="Pixel-art illustration: a man in a hoodie with the Akademi Linux mark on his back sits on the dunes beside a campfire, gazing up at shooting stars over a calm sea; the sand dissolves into the footer">
+  </div>
+  <div class="site-footer__ground">
+    <div class="container site-footer__inner">
+      <div class="site-footer__grid">
+        <div class="site-footer__identity">
+          <a class="brand" href="{{ config.base_url }}/">
+            <span class="mark" aria-hidden="true">AA</span>
+            <span class="brand__text">
+              <strong id="footer-title">{{ config.extra.author }}</strong>
+              <span>{{ config.extra.role }} · {{ config.extra.experience }}</span>
+            </span>
+          </a>
+          <p class="site-footer__blurb">{{ config.extra.tagline }} Notes on Linux, OpenStack, Ceph and Kubernetes.</p>
+          <div class="button-row">
+            <a class="button button--small" href="{{ config.base_url }}/atom.xml">Subscribe via Atom</a>
+            <a class="button button--small button--ghost" href="{{ config.base_url }}/rss.xml">RSS</a>
+          </div>
+        </div>
+
+        <nav class="site-map" aria-labelledby="site-map-title">
+          <h2 id="site-map-title">Site map</h2>
+          <ul>
+            <li><a href="{{ config.base_url }}/">Home</a></li>
+            <li><a href="{{ get_url(path='@/blog/_index.md') }}">Writing</a></li>
+            <li><a href="{{ get_url(path='@/about.md') }}">About</a></li>
+            <li><a href="{{ config.base_url }}/atom.xml">Atom feed</a></li>
+            <li><a href="{{ config.base_url }}/rss.xml">RSS feed</a></li>
+          </ul>
+        </nav>
+
+        <div class="socials">
+          <h2><span class="prompt__host">ajiarya@website</span>:~$ ls ~/socials</h2>
+          <ul>
+            {% for social in [
+              {"key": "github", "label": "GitHub", "url": config.extra.social.github},
+              {"key": "linkedin", "label": "LinkedIn", "url": config.extra.social.linkedin},
+              {"key": "instagram", "label": "Instagram", "url": config.extra.social.instagram},
+              {"key": "youtube", "label": "YouTube", "url": config.extra.social.youtube},
+              {"key": "threads", "label": "Threads", "url": config.extra.social.threads},
+              {"key": "tiktok", "label": "TikTok", "url": config.extra.social.tiktok}
+            ] %}
+              {% if social.url %}
+                <li><a href="{{ social.url }}" target="_blank" rel="me noopener">{{<brand_icon name={social.key} />}}<span>{{ social.label }}</span></a></li>
+              {% endif %}
+            {% endfor %}
+            {% if config.extra.social.email %}
+              <li><a href="mailto:{{ config.extra.social.email }}"><svg class="brand-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14"></rect><path d="m3 7 9 6 9-6"></path></svg><span>Email</span></a></li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+
+      <div class="site-footer__legal">
+        <div class="site-footer__legal-row">
+          <span>© {{ now() | date(format="%Y") }} {{ config.extra.author }} · Built with Zola &amp; Rust · no tracking, no client-side framework</span>
+          <span>Illustration: original pixel art</span>
+        </div>
+        <p>All trademarks belong to their respective owners. Use does not imply endorsement.</p>
+      </div>
     </div>
-
-    <nav class="site-footer__links" aria-label="Elsewhere">
-      <a href="{{ config.extra.social.github }}" target="_blank" rel="me noopener">GitHub</a>
-      <a href="{{ config.base_url }}/atom.xml">Atom</a>
-      <a href="{{ config.base_url }}/rss.xml">RSS</a>
-      {% if config.extra.social.email %}
-        <a href="mailto:{{ config.extra.social.email }}">Email</a>
-      {% endif %}
-    </nav>
-
-    <p class="site-footer__note">Built with Zola and Rust. No tracking, no client-side framework.</p>
   </div>
 </footer>

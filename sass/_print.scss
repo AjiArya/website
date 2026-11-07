@@ -3,11 +3,17 @@
     --bg: #fff;
     --bg-elevated: #fff;
     --bg-subtle: #fff;
+    --glass: #fff;
     --ink: #000;
+    --ink-body: #333;
     --ink-soft: #333;
     --ink-muted: #555;
     --rule: #ccc;
+    --rule-subtle: #ddd;
+    --rule-tag: #ccc;
     --rule-strong: #999;
+    --term: #000;
+    --glow: #000;
     --accent: #000;
     --accent-hover: #000;
     --code-bg: #f5f5f5;
@@ -30,11 +36,16 @@
     --dg-pink: #8a3d62;
   }
 
+  .sky,
+  .caret,
   .site-header,
   .site-footer,
   .post__aside,
   .hero__panel,
   .post__footer,
+  .post-nav,
+  .author-card,
+  .back-to-top,
   .code-copy {
     display: none !important;
   }
@@ -45,14 +56,22 @@
     font-size: 11pt;
   }
 
+  .highlight {
+    color: inherit;
+    text-shadow: none;
+  }
+
   .prose,
   .prose p,
   .prose li {
     color: #333;
+    font-size: 11pt;
+    line-height: 1.5;
   }
 
   .post__layout,
   .post__header,
+  .post__article,
   .prose,
   .prose > * {
     max-width: none;

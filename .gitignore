@@ -9,6 +9,7 @@
 id_rsa*
 .DS_Store
 .direnv/
+.claude/settings.local.json
 
 # OpenCode: track the small setup, ignore vendor clones and the UI/UX clone
 .opencode/*

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set work = load_data(path="data/work.yaml") %}
+{% set experience = load_data(path="data/experience.yaml") %}
+{% set certifications = load_data(path="data/certifications.yaml") %}
+{% set approach_label = "03 · Approach" %}
+{% set elsewhere_label = "04 · Elsewhere" %}
+{% if certifications %}
+  {% set approach_label = "04 · Approach" %}
+  {% set elsewhere_label = "05 · Elsewhere" %}
+{% endif %}
+
+<div class="container stack stack--about">
+  <section class="about-intro" aria-labelledby="about-title">
+    <div class="about-intro__text">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="{{ config.base_url }}/">~</a> / <span aria-current="page">about</span></nav>
+      <h1 id="about-title">{{ page.title }}<span class="caret" aria-hidden="true">▋</span></h1>
+      <p class="about-intro__lede">{{ page.description }}</p>
+      <div class="about-copy">{{ page.content | safe }}</div>
+    </div>
+
+    <aside class="panel neofetch" aria-label="Profile summary">
+      <div class="panel__bar"><span>ajiarya@website: ~</span><span><span class="panel__led" aria-hidden="true">●</span> tty1</span></div>
+      <div class="neofetch__body">
+        <div class="prompt"><span class="prompt__host">ajiarya@website</span>:~$ <span class="neofetch__command">neofetch</span></div>
+        <div class="neofetch__info">
+          <div class="mark" aria-hidden="true">AA</div>
+          <dl>
+            <dt>user</dt><dd>{{ config.extra.author }}</dd>
+            <dt>role</dt><dd>{{ config.extra.role }}</dd>
+            <dt>uptime</dt><dd>{{ config.extra.experience }}</dd>
+            <dt>stack</dt><dd>Linux · OpenStack · Ceph · Kubernetes</dd>
+            <dt>also</dt><dd>Automation · Observability</dd>
+            <dt>site</dt><dd>Zola + Rust, no tracking</dd>
+          </dl>
+        </div>
+        <div class="neofetch__palette" aria-hidden="true">
+          <span style="background: #0a0a0a; border: 1px solid #30363d"></span><span style="background: #15803d"></span><span style="background: #1cb900"></span><span style="background: #22c55e"></span><span style="background: #4ade80"></span><span style="background: #e6edf3"></span>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <section class="section" aria-labelledby="work-title">
+    <div class="section__head">
+      <p class="eyebrow">01 · Work</p>
+      <h2 id="work-title">What I work on</h2>
+    </div>
+    <div class="card-grid">
+      {% for item in work %}
+        <article class="card">
+          <span class="card__index">[{{ item.index }}] {{ item.slug }}</span>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.description }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% for role in experience %}
+    <section class="section--split" aria-labelledby="experience-title-{{ loop.index }}">
+      <div class="section__head">
+        <p class="eyebrow">02 · Experience</p>
+        <h2 id="experience-title-{{ loop.index }}">{{ role.context }}</h2>
+        <p class="experience-period">{{ role.period }}</p>
+      </div>
+      <div class="experience-card">
+        <div class="experience-card__head">
+          <h3>{{ role.role }}</h3>
+          {% if role.current %}<span class="tag">current</span>{% endif %}
+        </div>
+        <ul>
+          {% for point in role.points %}
+            <li>{{ point }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+  {% endfor %}
+
+  {% if certifications %}
+    <section class="section" aria-labelledby="cert-title">
+      <div class="section__head section__head--row">
+        <div>
+          <p class="eyebrow">03 · Certifications</p>
+          <h2 id="cert-title">Certifications</h2>
+        </div>
+        <span class="prompt"><span class="prompt__host">$</span> ls ~/certs</span>
+      </div>
+      <div class="card-grid" style="--card-min: 300px">
+        {% for cert in certifications %}
+          <article class="cert">
+            <span class="cert__badge" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"></circle><path d="M8.5 13.9 7 22l5-3 5 3-1.5-8.1"></path><path d="m9.5 9 1.7 1.7L14.5 7.5"></path></svg></span>
+            <div class="cert__text">
+              <h3>{{ cert.name }}</h3>
+              <span>{{ cert.issuer }} · {{ cert.year }}</span>
+              {% if cert.url %}<a href="{{ cert.url }}" target="_blank" rel="noopener">View credential ↗</a>{% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="section--split" aria-labelledby="approach-title">
+    <div class="section__head">
+      <p class="eyebrow">{{ approach_label }}</p>
+      <h2 id="approach-title">How I think about platforms</h2>
+    </div>
+    <div class="approach">
+      <blockquote>Infrastructure is a product <span class="highlight">with users.</span></blockquote>
+      <div class="about-copy">
+        <p>The goal is shorter incidents, safer upgrades, and engineers who can reason about the system without having to ask me.</p>
+        <p>I write about what documentation rarely teaches: the seams between components, the assumptions that fail at 3 a.m., and the design choices that make operations calmer.</p>
+      </div>
+      <a class="text-link" href="{{ get_url(path='@/blog/_index.md') }}">Read the writing →</a>
+    </div>
+  </section>
+
+  <section class="elsewhere" aria-labelledby="elsewhere-title">
+    <div class="section__head">
+      <p class="eyebrow">{{ elsewhere_label }}</p>
+      <h2 id="elsewhere-title">Find me on GitHub. New posts go to the feed.</h2>
+    </div>
+    <div class="card-grid elsewhere__links">
+      <a class="button" href="{{ config.extra.social.github }}" target="_blank" rel="me noopener"><span>github.com/AjiArya</span><span aria-hidden="true">↗</span></a>
+      <a class="button button--ghost" href="{{ config.base_url }}/atom.xml"><span>atom.xml</span><span class="elsewhere__note">feed</span></a>
+      <a class="button button--ghost" href="{{ config.base_url }}/rss.xml"><span>rss.xml</span><span class="elsewhere__note">feed</span></a>
+    </div>
+  </section>
+</div>
+{% endblock content %}

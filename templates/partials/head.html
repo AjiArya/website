@@ -4,7 +4,7 @@
 <meta name="description" content="{% if page is defined and page.description is defined and page.description %}{{ page.description }}{% elif section is defined and section.description is defined and section.description %}{{ section.description }}{% else %}{{ config.description }}{% endif %}">
 <meta name="author" content="{{ config.extra.author }}">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0b0d0c">
+<meta name="theme-color" content="#0a0a0a">
 <link rel="canonical" href="{{ current_url | default(value=config.base_url) }}">
 
 <meta property="og:site_name" content="{{ config.title }}">
@@ -21,7 +21,11 @@
 <link rel="icon" href="{{ get_url(path='favicon.svg') }}" type="image/svg+xml">
 <link rel="alternate" type="application/atom+xml" title="{{ config.title }} — Atom" href="{{ config.base_url }}/atom.xml">
 <link rel="alternate" type="application/rss+xml" title="{{ config.title }} — RSS" href="{{ config.base_url }}/rss.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="{{ get_url(path='main.css', cachebust=true) }}">
 <link rel="stylesheet" href="{{ get_url(path='giallo.css', cachebust=true) }}">
 <script>document.documentElement.classList.add("js");</script>
 <script defer src="{{ get_url(path='js/site.js', cachebust=true) }}"></script>
+<script defer src="{{ get_url(path='js/starfield.js', cachebust=true) }}"></script>

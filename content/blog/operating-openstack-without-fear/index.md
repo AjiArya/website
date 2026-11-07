@@ -9,6 +9,7 @@ tags = ["openstack", "operations", "linux"]
 
 [extra]
 demo = true
+highlight = "without fear"
 +++
 OpenStack upgrades have a reputation for drama. Most of the drama I have seen did not come from the upgrade itself; it came from the assumptions around it — undocumented local changes, untested database migrations, and a rollback plan that existed only in someone’s head.
 

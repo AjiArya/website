@@ -1,49 +1,68 @@
 :root {
   color-scheme: dark;
 
-  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  /* The display face is mono in the terminal theme. Keeping the old variable
-     name means the rest of the stylesheet does not need a parallel vocabulary. */
-  --font-serif: var(--font-mono);
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 
-  --bg: #0b0d0c;
-  --bg-elevated: #101411;
-  --bg-subtle: #0f1511;
-  --ink: #d8e3d8;
-  --ink-soft: #9aab9a;
-  --ink-muted: #8a978b;
-  --rule: #243027;
-  --rule-strong: #344638;
-  --accent: #1cb900;
-  --accent-hover: #38d91c;
-  --accent-soft: rgba(28, 185, 0, 0.13);
-  --accent-ink: #07110a;
-  --selection: #1c4a12;
-  --focus: #1cb900;
-  --code-bg: #07110a;
-  --code-border: #243027;
-  --shadow: 0 28px 70px -42px rgba(0, 0, 0, 0.9);
+  --bg: #0a0a0a;
+  --bg-subtle: #0d1117;
+  --bg-elevated: #161b22;
+  --glass: rgba(13, 17, 23, 0.85);
+  --ink: #e6edf3;
+  --ink-body: #c9d1d9;
+  --ink-soft: #a9b4bf;
+  --ink-muted: #8b949e;
+  --rule: #30363d;
+  --rule-subtle: #21262d;
+  --rule-tag: #1f3d2a;
+  --rule-strong: #484f58;
+  --brand: #1cb900;
+  --term: #22c55e;
+  --glow: #4ade80;
+  --info: #58a6ff;
+  --warn: #f5c46b;
+  --accent: var(--term);
+  --accent-hover: #86efac;
+  --accent-soft: rgba(34, 197, 94, 0.12);
+  --accent-ink: #0a0a0a;
+  --selection: #15803d;
+  --focus: #4ade80;
+  --code-bg: #0d1117;
+  --code-border: #30363d;
+  --shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --ground: #0f2e18;
+  --ground-rule: #15803d;
 
-  --container: 1180px;
-  --measure: 68ch;
-  --gutter: clamp(20px, 4vw, 48px);
+  --glow-sm: 0 0 4px rgb(74 222 128 / 0.5);
+  --glow-md: 0 0 8px rgb(74 222 128 / 0.55), 0 0 28px rgb(28 185 0 / 0.35);
+  --glow-cta: 0 0 24px rgb(28 185 0 / 0.4);
+  --glow-panel: 0 0 40px rgb(34 197 94 / 0.12);
+  --glow-mark: 0 0 6px rgb(74 222 128 / 0.6);
+  --glow-mark-box: 0 0 14px rgb(34 197 94 / 0.18);
+
+  --ease-term: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 240ms;
+
+  --container: 1200px;
+  --measure: 860px;
+  --gutter: clamp(16px, 4vw, 40px);
 
   --dg-bg: transparent;
-  --dg-node-bg: #101411;
-  --dg-node-border: #2c3a30;
-  --dg-text: #d8e3d8;
-  --dg-muted: #8a9c8d;
-  --dg-edge: #7f9182;
-  --dg-label-halo: #0b0d0c;
-  --dg-group-bg: #101411;
-  --dg-group-border: #243027;
-  --dg-neutral: #8b9c8d;
-  --dg-blue: #79b8ff;
+  --dg-node-bg: #0d1117;
+  --dg-node-border: #30363d;
+  --dg-text: #e6edf3;
+  --dg-muted: #8b949e;
+  --dg-edge: #8b949e;
+  --dg-label-halo: #0a0a0a;
+  --dg-group-bg: #0d1117;
+  --dg-group-border: #30363d;
+  --dg-neutral: #8b949e;
+  --dg-blue: #58a6ff;
   --dg-violet: #b7a1ff;
-  --dg-green: #1cb900;
-  --dg-amber: #e6c26e;
-  --dg-red: #ff8b7a;
+  --dg-green: #22c55e;
+  --dg-amber: #f5c46b;
+  --dg-red: #f85149;
   --dg-cyan: #7fe0e0;
   --dg-pink: #f3a0c8;
 }

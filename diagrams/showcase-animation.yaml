@@ -1,0 +1,28 @@
+version: 1
+style: detailed
+title: Edge animations
+description: Six node pairs, each joined by an edge that shows a different animation type or packet direction.
+direction: LR
+animation:
+  preset: subtle
+  autoplay: true
+nodes:
+  - { id: none, label: "animation: none", tone: neutral }
+  - { id: none_to, label: target, tone: neutral }
+  - { id: draw, label: "animation: draw", tone: blue }
+  - { id: draw_to, label: target, tone: neutral }
+  - { id: pulse, label: "animation: pulse", tone: violet }
+  - { id: pulse_to, label: target, tone: neutral }
+  - { id: alternate, label: "flow: alternate", tone: green }
+  - { id: alternate_to, label: target, tone: neutral }
+  - { id: forward, label: "flow: forward", tone: cyan }
+  - { id: forward_to, label: target, tone: neutral }
+  - { id: reverse, label: "flow: reverse", tone: amber }
+  - { id: reverse_to, label: target, tone: neutral }
+edges:
+  - { from: none, to: none_to, animation: none }
+  - { from: draw, to: draw_to, animation: draw }
+  - { from: pulse, to: pulse_to, animation: pulse }
+  - { from: alternate, to: alternate_to, animation: flow, direction: alternate }
+  - { from: forward, to: forward_to, animation: flow, direction: forward }
+  - { from: reverse, to: reverse_to, animation: flow, direction: reverse }

@@ -19,10 +19,15 @@
   position: relative;
 }
 
+.prose pre:has(> code) {
+  padding-top: 44px;
+}
+
 .prose pre > code[data-lang]::before {
   content: attr(data-lang);
-  float: right;
-  margin: -8px -8px 0 16px;
+  position: absolute;
+  top: 14px;
+  left: 20px;
   color: var(--ink-muted);
   font-family: var(--font-mono);
   font-size: 9px;
@@ -32,8 +37,8 @@
 
 .code-copy {
   position: absolute;
+  top: 8px;
   right: 8px;
-  bottom: 8px;
   z-index: 1;
   padding: 4px 7px;
   border: 1px solid var(--code-border);

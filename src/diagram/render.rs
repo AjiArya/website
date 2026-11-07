@@ -616,7 +616,7 @@ pub fn escape_attr(value: &str) -> String {
 /// Styles embedded into standalone SVG exports. The site uses the same rules in
 /// `sass/_diagram.scss`; keep the class names in sync when changing either one.
 const STANDALONE_CSS: &str = r#"
-:root{color-scheme:dark;--dg-bg:#0b0d0c;--dg-node-bg:#101411;--dg-node-border:#2c3a30;--dg-text:#d8e3d8;--dg-muted:#7f9182;--dg-edge:#7f9182;--dg-label-halo:#0b0d0c;--dg-group-bg:#101411;--dg-group-border:#243027;--dg-neutral:#8b9c8d;--dg-blue:#79b8ff;--dg-violet:#b7a1ff;--dg-green:#1cb900;--dg-amber:#e6c26e;--dg-red:#ff8b7a;--dg-cyan:#7fe0e0;--dg-pink:#f3a0c8}
+:root{color-scheme:dark;--dg-bg:#0a0a0a;--dg-node-bg:#0d1117;--dg-node-border:#30363d;--dg-text:#e6edf3;--dg-muted:#8b949e;--dg-edge:#8b949e;--dg-label-halo:#0a0a0a;--dg-group-bg:#0d1117;--dg-group-border:#30363d;--dg-neutral:#8b949e;--dg-blue:#58a6ff;--dg-violet:#b7a1ff;--dg-green:#22c55e;--dg-amber:#f5c46b;--dg-red:#f85149;--dg-cyan:#7fe0e0;--dg-pink:#f3a0c8}
 .dg-svg{background:var(--dg-bg);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .dg-tone-neutral{--dg-tone:var(--dg-neutral)}.dg-tone-blue{--dg-tone:var(--dg-blue)}.dg-tone-violet{--dg-tone:var(--dg-violet)}.dg-tone-green{--dg-tone:var(--dg-green)}.dg-tone-amber{--dg-tone:var(--dg-amber)}.dg-tone-red{--dg-tone:var(--dg-red)}.dg-tone-cyan{--dg-tone:var(--dg-cyan)}.dg-tone-pink{--dg-tone:var(--dg-pink)}
 .dg-group-box{fill:var(--dg-group-bg);stroke:var(--dg-group-border);stroke-width:1}

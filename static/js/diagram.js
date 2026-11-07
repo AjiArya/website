@@ -1371,7 +1371,7 @@
         window
           .getComputedStyle(document.documentElement)
           .getPropertyValue("--bg")
-          .trim() || "#0b0d0c";
+          .trim() || "#0a0a0a";
       const backgroundRect = document.createElementNS(
         "http://www.w3.org/2000/svg",
         "rect",

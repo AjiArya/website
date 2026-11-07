@@ -1,40 +1,110 @@
 (() => {
-  const menuToggle = document.querySelector("[data-menu-toggle]");
-  const siteNav = document.querySelector("[data-site-nav]");
+  const postFilter = document.querySelector("[data-post-filter]");
+  if (postFilter) {
+    const chipGroup = postFilter.querySelector("[data-filter-chips]");
+    const chips = Array.from(postFilter.querySelectorAll("[data-filter-tag]"));
+    const posts = Array.from(postFilter.querySelectorAll("[data-post-tags]"));
+    const activeLabel = postFilter.querySelector("[data-filter-active]");
+    const countLabel = postFilter.querySelector("[data-filter-count]");
 
-  if (menuToggle && siteNav) {
-    const setMenuOpen = (open) => {
-      siteNav.classList.toggle("is-open", open);
-      menuToggle.setAttribute("aria-expanded", String(open));
-      menuToggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+    const applyFilter = (tag) => {
+      let visible = 0;
+      posts.forEach((post) => {
+        const matches = tag === "all" || post.dataset.postTags.split(" ").includes(tag);
+        post.hidden = !matches;
+        if (matches) visible += 1;
+      });
+      chips.forEach((chip) => {
+        chip.setAttribute("aria-pressed", String(chip.dataset.filterTag === tag));
+      });
+      activeLabel.textContent = tag;
+      countLabel.textContent = `${visible} ${visible === 1 ? "post" : "posts"}`;
     };
 
-    menuToggle.addEventListener("click", (event) => {
-      event.stopPropagation();
-      setMenuOpen(!siteNav.classList.contains("is-open"));
+    chips.forEach((chip) => {
+      chip.addEventListener("click", () => applyFilter(chip.dataset.filterTag));
+    });
+    chipGroup.hidden = false;
+  }
+
+  const share = document.querySelector("[data-share]");
+  if (share) {
+    const toggle = share.querySelector("[data-share-toggle]");
+    const menu = share.querySelector("[data-share-menu]");
+    const caret = share.querySelector("[data-share-caret]");
+    const copyButton = share.querySelector("[data-share-copy]");
+    const copyLabel = share.querySelector("[data-share-copy-label]");
+
+    const setShareOpen = (open) => {
+      menu.hidden = !open;
+      toggle.setAttribute("aria-expanded", String(open));
+      caret.textContent = open ? "▴" : "▾";
+      if (open) copyLabel.textContent = "Copy link";
+    };
+
+    toggle.addEventListener("click", () => setShareOpen(menu.hidden));
+
+    menu.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => setShareOpen(false));
     });
 
-    siteNav.querySelectorAll("a").forEach((link) => {
-      link.addEventListener("click", () => setMenuOpen(false));
+    copyButton.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(copyButton.dataset.shareCopy);
+        copyLabel.textContent = "Link copied ✓";
+      } catch (_) {
+        copyLabel.textContent = "Copy failed";
+      }
     });
 
     document.addEventListener("click", (event) => {
-      if (!siteNav.contains(event.target) && !menuToggle.contains(event.target)) {
-        setMenuOpen(false);
-      }
+      if (!share.contains(event.target)) setShareOpen(false);
     });
 
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && siteNav.classList.contains("is-open")) {
-        setMenuOpen(false);
-        menuToggle.focus();
+    share.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !menu.hidden) {
+        setShareOpen(false);
+        toggle.focus();
       }
     });
+  }
 
-    const desktop = window.matchMedia("(min-width: 901px)");
-    desktop.addEventListener("change", (event) => {
-      if (event.matches) setMenuOpen(false);
-    });
+  const toc = document.querySelector("[data-toc]");
+  if (toc && "IntersectionObserver" in window) {
+    const links = Array.from(toc.querySelectorAll("a"));
+    const headings = links
+      .map((link) => document.getElementById(link.hash.slice(1)))
+      .filter(Boolean);
+
+    const setCurrent = (id) => {
+      links.forEach((link) => {
+        if (link.hash.slice(1) === id) {
+          link.setAttribute("aria-current", "true");
+        } else {
+          link.removeAttribute("aria-current");
+        }
+      });
+    };
+
+    if (headings.length) {
+      setCurrent(headings[0].id);
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const crossing = entries.filter((entry) => entry.isIntersecting);
+          if (crossing.length) setCurrent(crossing[crossing.length - 1].target.id);
+        },
+        { rootMargin: "0px 0px -70% 0px" },
+      );
+      headings.forEach((heading) => observer.observe(heading));
+    }
+  }
+
+  const backToTop = document.querySelector("[data-back-to-top]");
+  const postHeader = document.querySelector(".post__header");
+  if (backToTop && postHeader && "IntersectionObserver" in window) {
+    new IntersectionObserver(([entry]) => {
+      backToTop.hidden = entry.isIntersecting || entry.boundingClientRect.top > 0;
+    }).observe(postHeader);
   }
 
   const terminal = document.querySelector("[data-terminal]");

@@ -4,6 +4,6 @@ description = "Notes from building and operating open-source cloud infrastructur
 template = "blog/list.html"
 page_template = "blog/page.html"
 sort_by = "date"
-insert_anchor_links = "right"
+insert_anchor_links = "left"
 +++
 Notes from the infrastructure layer: Kubernetes, OpenStack, Ceph, Linux, and the operational work between them.

@@ -2,133 +2,96 @@
 
 {% block content %}
 {% set focus = load_data(path="data/focus.yaml") %}
-{% set experience = load_data(path="data/experience.yaml") %}
 {% set blog = get_section(path="blog/_index.md") %}
 
-<section class="hero container">
-  <div class="hero__main">
-    <p class="eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> Cloud engineer &amp; architect <span class="eyebrow__sep">/</span> {{ config.extra.experience }}</p>
-    <h1 class="hero__title">{{ config.extra.tagline }}</h1>
-    <p class="hero__lede">{{ config.extra.intro }}</p>
-    <div class="hero__actions">
-      <a class="button" href="{{ get_url(path='@/blog/_index.md') }}">Read the writing <span aria-hidden="true">→</span></a>
-      <a class="button button--ghost" href="{{ get_url(path='@/about.md') }}">About me</a>
+<div class="container stack stack--home">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero__main">
+      <h1 class="hero__title" id="hero-title">I build the layer <span class="highlight">beneath the product.</span><span class="caret" aria-hidden="true">▋</span></h1>
+      <p class="hero__lede">{{ config.extra.intro }}</p>
+      <div class="button-row">
+        <a class="button" href="{{ get_url(path='@/blog/_index.md') }}">Read the writing →</a>
+        <a class="button button--ghost" href="{{ get_url(path='@/about.md') }}">About me</a>
+      </div>
     </div>
-  </div>
 
-  <aside class="hero__panel" aria-label="At a glance">
-    <div class="hero__panel-head"><span class="status-dot" aria-hidden="true"></span> At a glance</div>
-    <dl class="hero__facts">
-      <div>
-        <dt>Focus</dt>
+    <aside class="panel hero__panel" aria-label="At a glance">
+      <div class="panel__bar"><span>~/at-a-glance</span><span><span class="panel__led" aria-hidden="true">●</span> online</span></div>
+      <dl class="fact-list">
+        <dt>focus</dt>
         <dd>Platform engineering</dd>
-      </div>
-      <div>
-        <dt>Stack</dt>
+        <dt>stack</dt>
         <dd>Linux · OpenStack · Ceph · Kubernetes</dd>
-      </div>
-      <div>
-        <dt>Now</dt>
+        <dt>now</dt>
         <dd>Writing about the infrastructure layer</dd>
-      </div>
-    </dl>
-    <div class="hero__panel-rule" aria-hidden="true"></div>
-    <p class="hero__status">{{ config.extra.status }}</p>
-  </aside>
-</section>
+        <dt>uptime</dt>
+        <dd class="fact-list__value--glow">{{ config.extra.experience }}</dd>
+      </dl>
+    </aside>
+  </section>
 
-<section class="section container" aria-labelledby="focus-title">
-  <div class="section__head">
-    <p class="eyebrow">Focus</p>
-    <h2 id="focus-title">Systems I like to own.</h2>
-  </div>
-  <div class="focus-grid">
-    {% for item in focus %}
-      <article class="focus-card">
-        <div class="focus-card__top">
-          <span class="focus-card__index">{{ item.index }}</span>
-          <span class="focus-card__line" aria-hidden="true"></span>
-        </div>
-        <h3>{{ item.title }}</h3>
-        <p>{{ item.description }}</p>
-      </article>
-    {% endfor %}
-  </div>
-</section>
-
-<section class="section container" aria-labelledby="writing-title">
-  <div class="section__head section__head--row">
-    <div>
-      <p class="eyebrow">Writing</p>
-      <h2 id="writing-title">Notes from the platform layer.</h2>
+  <section class="section" aria-labelledby="focus-title">
+    <div class="section__head">
+      <p class="eyebrow">01 · Focus</p>
+      <h2 id="focus-title">Systems I like to own</h2>
     </div>
-    <a class="text-link" href="{{ get_url(path='@/blog/_index.md') }}">All writing <span aria-hidden="true">→</span></a>
-  </div>
-  <div class="post-list">
-    {% for post in blog.pages[0:3] %}
-      {% include "partials/post-card.html" %}
-    {% endfor %}
-  </div>
-</section>
+    <div class="card-grid" style="--card-min: 240px">
+      {% for item in focus %}
+        <article class="card">
+          <span class="card__index">[{{ item.index }}]</span>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.description }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
 
-<section class="section section--split container" aria-labelledby="experience-title">
-  <div class="section__head">
-    <p class="eyebrow">Experience</p>
-    <h2 id="experience-title">Five years at the layer beneath the product.</h2>
-    <p class="section__note">I work across the control plane, the storage cluster, and the Linux hosts that hold them together.</p>
-  </div>
-  <div class="experience">
-    {% for role in experience %}
-      <article class="experience__item">
-        <div class="experience__meta">
-          <span>{{ role.period }}</span>
-          <span>{{ role.context }}</span>
-        </div>
-        <h3>{{ role.role }}</h3>
-        <p>{{ role.summary }}</p>
-        <ul>
-          {% for point in role.points %}
-            <li>{{ point }}</li>
-          {% endfor %}
-        </ul>
-      </article>
-    {% endfor %}
-  </div>
-</section>
+  <section class="section" aria-labelledby="writing-title">
+    <div class="section__head section__head--row">
+      <div>
+        <p class="eyebrow">02 · Writing</p>
+        <h2 id="writing-title">Notes from the platform layer</h2>
+      </div>
+      <a class="text-link" href="{{ get_url(path='@/blog/_index.md') }}">All writing →</a>
+    </div>
+    <div class="post-list">
+      {% for post in blog.pages[0:3] %}
+        {% include "partials/post-row.html" %}
+      {% endfor %}
+    </div>
+  </section>
 
-<section class="section container" aria-labelledby="principles-title">
-  <div class="section__head">
-    <p class="eyebrow">Principles</p>
-    <h2 id="principles-title">Calm infrastructure is designed, not discovered.</h2>
-  </div>
-  <ol class="principles">
-    <li>
-      <span class="principles__index">01</span>
-      <h3>Make failure domains visible.</h3>
-      <p>If the diagram cannot show what happens when a rack, a link, or a monitor disappears, the design is not finished.</p>
-    </li>
-    <li>
-      <span class="principles__index">02</span>
-      <h3>Prefer boring upgrades.</h3>
-      <p>A rollback plan, a tested migration, and a clear definition of done are worth more than a clever deployment.</p>
-    </li>
-    <li>
-      <span class="principles__index">03</span>
-      <h3>Make the system legible.</h3>
-      <p>Dashboards, runbooks, and diagrams are part of the product. The next engineer should not need the original author.</p>
-    </li>
-  </ol>
-</section>
+  <section class="section" aria-labelledby="principles-title">
+    <div class="section__head">
+      <p class="eyebrow">03 · Principles</p>
+      <h2 class="principles__title" id="principles-title">Calm infrastructure is designed, not discovered</h2>
+    </div>
+    <div class="card-grid">
+      <div class="principle">
+        <span class="principle__index" aria-hidden="true">01</span>
+        <h3>Make failure domains visible</h3>
+        <p>Know what breaks together before it does.</p>
+      </div>
+      <div class="principle">
+        <span class="principle__index" aria-hidden="true">02</span>
+        <h3>Prefer boring upgrades</h3>
+        <p>Small, rehearsed, reversible steps beat heroics.</p>
+      </div>
+      <div class="principle">
+        <span class="principle__index" aria-hidden="true">03</span>
+        <h3>Make the system legible</h3>
+        <p>If the next engineer can't read it, it isn't done.</p>
+      </div>
+    </div>
+  </section>
 
-<section class="contact container">
-  <div>
-    <p class="eyebrow">Contact</p>
-    <h2>Have a platform problem worth mapping?</h2>
-    <p>I am always interested in conversations about private cloud, storage reliability, and Kubernetes platforms that have to survive real operations.</p>
-  </div>
-  <div class="contact__links">
-    <a class="button" href="{{ config.extra.social.github }}" target="_blank" rel="me noopener">Find me on GitHub <span aria-hidden="true">↗</span></a>
-    <a class="text-link" href="{{ config.base_url }}/atom.xml">Subscribe via Atom</a>
-  </div>
-</section>
+  <section class="callout" aria-labelledby="contact-title">
+    <span class="prompt"><span class="prompt__host">ajiarya@website</span>:~$ ./contact.sh</span>
+    <h2 id="contact-title">Have a platform problem <span class="highlight">worth mapping?</span></h2>
+    <div class="button-row">
+      <a class="button" href="{{ config.extra.social.github }}" target="_blank" rel="me noopener">Find me on GitHub ↗</a>
+      <a class="button button--ghost" href="{{ config.base_url }}/atom.xml">Subscribe via Atom</a>
+    </div>
+  </section>
+</div>
 {% endblock content %}

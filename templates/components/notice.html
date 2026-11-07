@@ -1,0 +1,6 @@
+{% component notice(kind: string, title: string = "") %}
+<aside class="notice notice--{{ kind }}">
+  <p class="notice__label">[{% if title %}{{ title }}{% else %}{{ kind }}{% endif %}]</p>
+  <div class="notice__body">{{ body | markdown | safe }}</div>
+</aside>
+{% endcomponent notice %}

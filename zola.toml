@@ -17,7 +17,9 @@ taxonomies = [{ name = "tags", feed = true }]
 [markdown]
 smart_punctuation = true
 github_alerts = true
-insert_anchor_links = "right"
+definition_list = true
+bottom_footnotes = true
+insert_anchor_links = "left"
 lazy_async_image = true
 external_links_target_blank = true
 external_links_no_referrer = true
@@ -36,12 +38,14 @@ author = "Aji Arya"
 role = "Cloud Engineer & Architect"
 experience = "5 years"
 tagline = "I build the layer beneath the product."
-intro = "Cloud engineer and architect working across Linux, OpenStack, Ceph, and Kubernetes. I care about the unglamorous parts: failure modes, upgrade paths, storage that heals itself, and platforms people can actually operate."
-status = "Open to conversations about platform architecture and infrastructure reliability."
-location = ""
+intro = "Cloud engineer and architect building reliable platforms with OpenStack, Ceph and Kubernetes. 5 years on private cloud infrastructure."
 
 [extra.social]
 github = "https://github.com/AjiArya"
 linkedin = ""
+instagram = ""
+youtube = ""
+threads = ""
+tiktok = ""
 email = ""
 rss = "atom.xml"

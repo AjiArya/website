@@ -32,4 +32,5 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check static/js/site.js
+          node --check static/js/starfield.js
           node --check static/js/diagram.js

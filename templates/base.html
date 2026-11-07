@@ -5,6 +5,7 @@
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
+  <div class="sky" aria-hidden="true"><canvas class="sky__canvas" data-sky{% block sky_attrs %}{% endblock sky_attrs %}></canvas></div>
   {% include "partials/header.html" %}
   <main id="main">
     {% block content %}{% endblock content %}

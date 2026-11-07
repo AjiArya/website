@@ -1,0 +1,24 @@
+version: 1
+style: architecture-simple
+title: Logical view with network rails
+description: Clients, servers and a virtual machine attached to three logical networks drawn as rails.
+direction: TB
+nodes:
+  - { id: client, kind: generic, label: Clients }
+  - { id: web, kind: server, label: web-01 }
+  - { id: app, kind: server, label: app-01 }
+  - { id: vm, kind: vm, label: vm-01 }
+  - { id: db, kind: server, label: db-01 }
+networks:
+  - id: public
+    label: Public network
+    tone: blue
+    members: [client, web]
+  - id: internal
+    label: Internal network
+    tone: amber
+    members: [web, app, vm]
+  - id: storage
+    label: Storage network
+    tone: green
+    members: [app, db]

@@ -1,0 +1,20 @@
+version: 1
+style: detailed
+title: Minimal diagram
+description: The smallest useful diagram, two nodes and one labelled edge, laid out left to right.
+direction: LR
+animation:
+  preset: none
+nodes:
+  - id: client
+    label: Client
+    icon: user
+    tone: blue
+  - id: api
+    label: API
+    icon: api
+    tone: green
+edges:
+  - from: client
+    to: api
+    label: HTTPS

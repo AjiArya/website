@@ -1,0 +1,11 @@
+<a class="post-row" href="{{ post.permalink }}">
+  <time class="post-row__meta" datetime="{{ post.date }}">{{ post.date | date(format="%b %d, %Y") }} · {{ post.reading_time }} min</time>
+  <h3>{{ post.title }}</h3>
+  {% if post.taxonomies.tags %}
+    <span class="tag-list">
+      {% for tag in post.taxonomies.tags %}
+        <span class="tag">#{{ tag }}</span>
+      {% endfor %}
+    </span>
+  {% endif %}
+</a>
