@@ -1,6 +1,6 @@
 # Site identity and build configuration.
 # Zola 0.23.x uses zola.toml (config.toml is still accepted for compatibility).
-base_url = "https://ajiarya.github.io/website"
+base_url = "https://ajiarya.id"
 title = "Aji Arya"
 author = "Aji Arya"
 description = "Cloud engineer and architect building reliable platforms with OpenStack, Ceph, and Kubernetes."

@@ -143,7 +143,9 @@ every push to `main`.
 1. In the GitHub repository, open **Settings → Pages** and set **Source** to
    **GitHub Actions**.
 2. Push to `main`.
-3. The site is published at <https://ajiarya.github.io/website/>.
+3. Under **Settings → Pages → Custom domain**, set `ajiarya.id`. GitHub Actions
+   deployments ignore `static/CNAME` for this setting, so it must be set here.
+4. The site is published at <https://ajiarya.id/>.
 
 If Pages is not enabled, the workflow still builds the site, uploads a
 `site-build` artifact, and skips deployment with a warning. Enable Pages and
